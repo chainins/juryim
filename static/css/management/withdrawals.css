@@ -1,0 +1,48 @@
+/* Withdrawal status colors */
+.withdrawal-status {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.withdrawal-amount {
+    font-family: monospace;
+    font-weight: 600;
+}
+
+.withdrawal-fee {
+    color: #6c757d;
+    font-size: 0.875em;
+}
+
+/* Action buttons */
+.withdrawal-actions {
+    white-space: nowrap;
+}
+
+.withdrawal-actions form {
+    display: inline-block;
+    margin: 0 0.25rem;
+}
+
+/* Confirmation dialog customization */
+.withdrawal-confirm-dialog {
+    max-width: 400px;
+}
+
+.withdrawal-confirm-dialog .modal-title {
+    font-size: 1.1rem;
+}
+
+/* Real-time updates */
+.status-updating {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+} 
