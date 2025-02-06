@@ -1,0 +1,39 @@
+{% extends "management/base.html" %}
+
+{% block management_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Financial Accounts</h1>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Balance</th>
+                <th>Frozen Balance</th>
+                <th>Total Deposited</th>
+                <th>Total Withdrawn</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for account in object_list %}
+            <tr>
+                <td>{{ account.user.username }}</td>
+                <td>{{ account.balance }}</td>
+                <td>{{ account.frozen_balance }}</td>
+                <td>{{ account.total_deposited }}</td>
+                <td>{{ account.total_withdrawn }}</td>
+                <td>{{ account.created_at }}</td>
+                <td>
+                    <a href="{% url 'financial_management:account_detail' account.id %}" 
+                       class="btn btn-sm btn-outline-secondary">View Details</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

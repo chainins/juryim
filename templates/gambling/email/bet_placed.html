@@ -1,0 +1,31 @@
+{% extends "email/base.html" %}
+
+{% block content %}
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <h2>Bet Placed Successfully!</h2>
+    
+    <p>Hello,</p>
+    
+    <p>Your bet has been successfully placed on the game "{{ game.title }}".</p>
+    
+    <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
+        <h3>Bet Details:</h3>
+        <ul style="list-style: none; padding: 0;">
+            <li><strong>Amount:</strong> {{ bet.amount }}</li>
+            <li><strong>Fee:</strong> {{ bet.fee_amount }}</li>
+            <li><strong>Game Type:</strong> {{ game.game_type }}</li>
+            <li><strong>Bet Data:</strong> {{ bet.bet_data }}</li>
+            <li><strong>Game End Time:</strong> {{ game.end_time|date:"M d, Y H:i" }}</li>
+        </ul>
+    </div>
+    
+    <p>
+        <a href="{{ site_url }}{% url 'gambling:game_detail' game.id %}" 
+           style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            View Game
+        </a>
+    </p>
+    
+    <p>Good luck!</p>
+</div>
+{% endblock %} 

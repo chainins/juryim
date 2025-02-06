@@ -1,0 +1,195 @@
+{% extends "gambling/base.html" %}
+
+{% block gambling_content %}
+<div class="game-detail">
+    <div class="game-header">
+        <h2>{{ game.title }}</h2>
+        <span class="game-type badge badge-{{ game.game_type }}">{{ game.get_game_type_display }}</span>
+        <span class="game-status badge badge-{{ game.status }}">{{ game.get_status_display }}</span>
+    </div>
+
+    <div class="game-info">
+        <p class="description">{{ game.description }}</p>
+        
+        <div class="game-stats">
+            <div class="stat">
+                <span class="label">Total Pool:</span>
+                <span class="value">{{ game.total_pool }}</span>
+            </div>
+            <div class="stat">
+                <span class="label">Total Bets:</span>
+                <span class="value">{{ game.total_bets }}</span>
+            </div>
+            <div class="stat">
+                <span class="label">Players:</span>
+                <span class="value">{{ game.unique_players }}</span>
+            </div>
+            <div class="stat">
+                <span class="label">Fee:</span>
+                <span class="value">{{ game.fee_percentage }}%</span>
+            </div>
+        </div>
+
+        {% if game.status == 'active' %}
+        <div class="time-remaining" data-end-time="{{ game.end_time|date:'c' }}">
+            Time remaining: <span class="countdown"></span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if game.status == 'active' %}
+    <div class="betting-section">
+        <h3>Place Your Bet</h3>
+        <form method="post" class="bet-form" id="betForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="id_amount">Amount:</label>
+                {{ form.amount }}
+                {% if form.amount.errors %}
+                <div class="error">{{ form.amount.errors }}</div>
+                {% endif %}
+                <small class="help-text">
+                    Min: {{ game.minimum_single_bet }} | Max: {{ game.maximum_single_bet }}
+                </small>
+            </div>
+
+            {% if game.game_type == 'dice' %}
+            <div class="form-group">
+                <label for="id_number">Number:</label>
+                {{ form.number }}
+                {% if form.number.errors %}
+                <div class="error">{{ form.number.errors }}</div>
+                {% endif %}
+            </div>
+            {% elif game.game_type == 'coin' %}
+            <div class="form-group">
+                <label for="id_side">Side:</label>
+                {{ form.side }}
+                {% if form.side.errors %}
+                <div class="error">{{ form.side.errors }}</div>
+                {% endif %}
+            </div>
+            {% elif game.game_type == 'roulette' %}
+            <div class="form-group">
+                <label for="id_number">Number:</label>
+                {{ form.number }}
+                {% if form.number.errors %}
+                <div class="error">{{ form.number.errors }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="fee-calculation">
+                <span>Fee ({{ game.fee_percentage }}%):</span>
+                <span id="feeAmount">0.00000000</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Place Bet</button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if game.status == 'completed' %}
+    <div class="game-result">
+        <h3>Game Result</h3>
+        <div class="result-display">
+            {% if game.game_type == 'dice' %}
+            <div class="dice-result">
+                <span class="number">{{ game.result.number }}</span>
+            </div>
+            {% elif game.game_type == 'coin' %}
+            <div class="coin-result">
+                <span class="side">{{ game.result.side|title }}</span>
+            </div>
+            {% elif game.game_type == 'roulette' %}
+            <div class="roulette-result">
+                <span class="number">{{ game.result.number }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="user-bets">
+        <h3>Your Bets</h3>
+        {% if user_bets %}
+        <div class="bet-list">
+            {% for bet in user_bets %}
+            <div class="bet-card">
+                <div class="bet-info">
+                    <span class="amount">{{ bet.amount }}</span>
+                    <span class="status badge badge-{{ bet.status }}">{{ bet.get_status_display }}</span>
+                </div>
+                <div class="bet-details">
+                    {% if bet.game_type == 'dice' %}
+                    <span>Number: {{ bet.bet_data.number }}</span>
+                    {% elif bet.game_type == 'coin' %}
+                    <span>Side: {{ bet.bet_data.side|title }}</span>
+                    {% elif bet.game_type == 'roulette' %}
+                    <span>Number: {{ bet.bet_data.number }}</span>
+                    {% endif %}
+                </div>
+                {% if bet.status == 'won' %}
+                <div class="win-amount">
+                    Won: {{ bet.win_amount }}
+                </div>
+                {% endif %}
+                <div class="bet-time">
+                    {{ bet.placed_at|date:"M d, Y H:i:s" }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="no-bets">You haven't placed any bets on this game yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update countdown
+        const updateCountdown = function() {
+            const timeRemaining = document.querySelector('.time-remaining');
+            if (!timeRemaining) return;
+            
+            const endTime = new Date(timeRemaining.dataset.endTime);
+            const now = new Date();
+            const diff = endTime - now;
+            
+            if (diff <= 0) {
+                timeRemaining.querySelector('.countdown').textContent = 'Ended';
+                location.reload();
+                return;
+            }
+            
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            timeRemaining.querySelector('.countdown').textContent = 
+                `${minutes}m ${seconds}s`;
+        };
+        
+        setInterval(updateCountdown, 1000);
+        
+        // Calculate fee
+        const amountInput = document.getElementById('amount');
+        const feePercentage = '{{ game.fee_percentage }}';
+        
+        function updateFee() {
+            const amount = parseFloat(amountInput.value) || 0;
+            const fee = amount * (parseFloat(feePercentage) / 100);
+            document.getElementById('feeAmount').textContent = 
+                fee.toFixed(8);
+        }
+        
+        if (amountInput) {
+            amountInput.addEventListener('input', updateFee);
+            updateFee();
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Notifications</h2>
+        </div>
+        <div class="col text-end">
+            {% if unread_count > 0 %}
+                <a href="{% url 'notifications:mark_all_as_read' %}" 
+                   class="btn btn-secondary">
+                    Mark All as Read
+                </a>
+            {% endif %}
+            <a href="{% url 'notifications:preferences' %}" 
+               class="btn btn-primary">
+                Preferences
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            {% for notification in notifications %}
+                <div class="card mb-3 {% if not notification.is_read %}border-primary{% endif %}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="card-title mb-1">{{ notification.title }}</h5>
+                            <div>
+                                <span class="badge bg-{{ notification.priority }}">
+                                    {{ notification.get_priority_display }}
+                                </span>
+                                <span class="badge bg-{{ notification.notification_type }}">
+                                    {{ notification.get_notification_type_display }}
+                                </span>
+                            </div>
+                        </div>
+                        <p class="card-text">{{ notification.message }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                {{ notification.created_at|date:"M d, Y H:i" }}
+                            </small>
+                            <div>
+                                {% if notification.link %}
+                                    <a href="{{ notification.link }}" class="btn btn-sm btn-primary">
+                                        View Details
+                                    </a>
+                                {% endif %}
+                                {% if not notification.is_read %}
+                                    <a href="{% url 'notifications:mark_as_read' notification.id %}" 
+                                       class="btn btn-sm btn-secondary mark-read"
+                                       data-notification-id="{{ notification.id }}">
+                                        Mark as Read
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="alert alert-info">
+                    No notifications to display.
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle mark as read buttons
+    document.querySelectorAll('.mark-read').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const notificationId = this.dataset.notificationId;
+            fetch(this.href, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const card = this.closest('.card');
+                    card.classList.remove('border-primary');
+                    this.remove();
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %} 

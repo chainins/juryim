@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Setup Two-Factor Authentication{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Setup Two-Factor Authentication</h4>
+                </div>
+                <div class="card-body">
+                    <div class="setup-steps">
+                        <h5>Step 1: Install an Authenticator App</h5>
+                        <p>
+                            If you haven't already, install an authenticator app on your mobile device:
+                        </p>
+                        <ul>
+                            <li>Google Authenticator</li>
+                            <li>Authy</li>
+                            <li>Microsoft Authenticator</li>
+                        </ul>
+
+                        <hr>
+
+                        <h5>Step 2: Scan QR Code</h5>
+                        <p>
+                            Open your authenticator app and scan this QR code:
+                        </p>
+                        <div class="text-center mb-3">
+                            <img src="https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl={{ qr_uri|urlencode }}"
+                                 alt="QR Code"
+                                 class="img-fluid">
+                        </div>
+                        <p class="text-center">
+                            <small class="text-muted">
+                                Can't scan? Use this code: {{ secret }}
+                            </small>
+                        </p>
+
+                        <hr>
+
+                        <h5>Step 3: Verify Setup</h5>
+                        <p>
+                            Enter the 6-digit code from your authenticator app to verify the setup:
+                        </p>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                {{ form.code }}
+                                {% if form.code.errors %}
+                                    <div class="alert alert-danger">
+                                        {{ form.code.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                <a href="{% url 'security:dashboard' %}" class="btn btn-secondary">
+                                    Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    Verify and Enable 2FA
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

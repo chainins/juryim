@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}My Bets{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Betting Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">Total Bets Won</h6>
+                    <h3 class="card-text text-success">{{ stats.total_won }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">Total Bets Lost</h6>
+                    <h3 class="card-text text-danger">{{ stats.total_lost }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">Amount Won</h6>
+                    <h3 class="card-text text-success">{{ stats.amount_won }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">Amount Lost</h6>
+                    <h3 class="card-text text-danger">{{ stats.amount_lost }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Bets -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="card-title mb-0">Active Bets</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Game</th>
+                            <th>Type</th>
+                            <th>Bet Details</th>
+                            <th>Amount</th>
+                            <th>Placed</th>
+                            <th>Game Ends</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bet in active_bets %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'gambling:game_detail' bet.game.id %}">
+                                        {{ bet.game.title }}
+                                    </a>
+                                </td>
+                                <td>{{ bet.game.get_game_type_display }}</td>
+                                <td>
+                                    {% if bet.game.game_type == 'dice' %}
+                                        Number: {{ bet.bet_data.number }}
+                                    {% elif bet.game.game_type == 'coin' %}
+                                        Side: {{ bet.bet_data.side|title }}
+                                    {% elif bet.game.game_type == 'roulette' %}
+                                        Number: {{ bet.bet_data.number }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ bet.amount }}</td>
+                                <td>{{ bet.placed_at|date:"M d, Y H:i" }}</td>
+                                <td>{{ bet.game.end_time|date:"M d, Y H:i" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    No active bets.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completed Bets -->
+    <div class="card">
+        <div class="card-header">
+            <h4 class="card-title mb-0">Completed Bets</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Game</th>
+                            <th>Type</th>
+                            <th>Bet Details</th>
+                            <th>Amount</th>
+                            <th>Result</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bet in completed_bets %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'gambling:game_detail' bet.game.id %}">
+                                        {{ bet.game.title }}
+                                    </a>
+                                </td>
+                                <td>{{ bet.game.get_game_type_display }}</td>
+                                <td>
+                                    {% if bet.game.game_type == 'dice' %}
+                                        Number: {{ bet.bet_data.number }}
+                                    {% elif bet.game.game_type == 'coin' %}
+                                        Side: {{ bet.bet_data.side|title }}
+                                    {% elif bet.game.game_type == 'roulette' %}
+                                        Number: {{ bet.bet_data.number }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ bet.amount }}</td>
+                                <td>
+                                    {% if bet.game.game_type == 'dice' %}
+                                        Rolled: {{ bet.game.result.number }}
+                                    {% elif bet.game.game_type == 'coin' %}
+                                        {{ bet.game.result.side|title }}
+                                    {% elif bet.game.game_type == 'roulette' %}
+                                        Number: {{ bet.game.result.number }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ bet.status }}">
+                                        {{ bet.get_status_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    No completed bets.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,99 @@
+{% extends "gambling/base.html" %}
+
+{% block gambling_content %}
+<div class="user-bets-page">
+    <h2>My Bets</h2>
+    
+    <div class="filters">
+        <form method="get" class="filter-form">
+            <div class="filter-group">
+                <label for="status">Status:</label>
+                <select name="status" id="status">
+                    <option value="" {% if not status %}selected{% endif %}>All</option>
+                    <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </form>
+    </div>
+
+    {% if bets %}
+    <div class="bet-list">
+        {% for bet in bets %}
+        <div class="bet-card">
+            <div class="game-info">
+                <h3>{{ bet.game.title }}</h3>
+                <span class="game-type badge badge-{{ bet.game.game_type }}">
+                    {{ bet.game.get_game_type_display }}
+                </span>
+            </div>
+            
+            <div class="bet-info">
+                <div class="bet-amount">
+                    <span class="label">Amount:</span>
+                    <span class="value">{{ bet.amount }}</span>
+                </div>
+                
+                <div class="bet-details">
+                    {% if bet.game.game_type == 'dice' %}
+                    <span>Number: {{ bet.bet_data.number }}</span>
+                    {% elif bet.game.game_type == 'coin' %}
+                    <span>Side: {{ bet.bet_data.side|title }}</span>
+                    {% elif bet.game.game_type == 'roulette' %}
+                    <span>Number: {{ bet.bet_data.number }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="bet-status">
+                    <span class="status badge badge-{{ bet.status }}">
+                        {{ bet.get_status_display }}
+                    </span>
+                </div>
+                
+                {% if bet.status == 'won' %}
+                <div class="win-amount">
+                    <span class="label">Won:</span>
+                    <span class="value">{{ bet.win_amount }}</span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="bet-footer">
+                <span class="time">{{ bet.placed_at|date:"M d, Y H:i:s" }}</span>
+                <a href="{% url 'gambling:game_detail' bet.game.id %}" class="btn btn-outline">
+                    View Game
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if bets.has_other_pages %}
+    <div class="pagination">
+        {% if bets.has_previous %}
+        <a href="?page={{ bets.previous_page_number }}&status={{ status }}" class="btn btn-outline">
+            &laquo; Previous
+        </a>
+        {% endif %}
+        
+        <span class="current-page">
+            Page {{ bets.number }} of {{ bets.paginator.num_pages }}
+        </span>
+        
+        {% if bets.has_next %}
+        <a href="?page={{ bets.next_page_number }}&status={{ status }}" class="btn btn-outline">
+            Next &raquo;
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="no-bets">
+        <p>You haven't placed any bets yet.</p>
+        <a href="{% url 'gambling:game_list' %}" class="btn btn-primary">Find Games</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

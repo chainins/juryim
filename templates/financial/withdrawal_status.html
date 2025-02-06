@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}Withdrawal Status{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Withdrawal Status</h4>
+                </div>
+                <div class="card-body">
+                    <div class="withdrawal-details mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Amount</h5>
+                                <p class="lead">{{ withdrawal.amount }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Status</h5>
+                                <p>
+                                    <span class="badge bg-{{ withdrawal.status }}">
+                                        {{ withdrawal.get_status_display }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Network</h5>
+                                <p>{{ withdrawal.network }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Fee</h5>
+                                <p>{{ withdrawal.fee }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>Withdrawal Address</h5>
+                            <div class="input-group">
+                                <input type="text" 
+                                       class="form-control" 
+                                       value="{{ withdrawal.address }}" 
+                                       readonly>
+                                <button class="btn btn-outline-secondary copy-btn" 
+                                        data-clipboard-text="{{ withdrawal.address }}">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+
+                        {% if withdrawal.transaction_hash %}
+                            <div class="mb-4">
+                                <h5>Transaction Hash</h5>
+                                <div class="input-group">
+                                    <input type="text" 
+                                           class="form-control" 
+                                           value="{{ withdrawal.transaction_hash }}" 
+                                           readonly>
+                                    <button class="btn btn-outline-secondary copy-btn" 
+                                            data-clipboard-text="{{ withdrawal.transaction_hash }}">
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="status-timeline mb-4">
+                        <h5>Status Timeline</h5>
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="timeline-marker bg-success"></div>
+                                <div class="timeline-content">
+                                    <h6>Request Submitted</h6>
+                                    <small>{{ withdrawal.created_at|date:"M d, Y H:i" }}</small>
+                                </div>
+                            </div>
+                            
+                            {% if withdrawal.status != 'pending' %}
+                                <div class="timeline-item">
+                                    <div class="timeline-marker 
+                                                {% if withdrawal.status == 'processing' %}bg-warning
+                                                {% elif withdrawal.status == 'completed' %}bg-success
+                                                {% else %}bg-danger{% endif %}">
+                                    </div>
+                                    <div class="timeline-content">
+                                        <h6>Processing</h6>
+                                        <small>{{ withdrawal.updated_at|date:"M d, Y H:i" }}</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if withdrawal.status == 'completed' %}
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-success"></div>
+                                    <div class="timeline-content">
+                                        <h6>Completed</h6>
+                                        <small>{{ withdrawal.completed_at|date:"M d, Y H:i" }}</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <a href="{% url 'financial:dashboard' %}" class="btn btn-primary">
+                            Return to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.8/clipboard.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var clipboard = new ClipboardJS('.copy-btn');
+    
+    clipboard.on('success', function(e) {
+        e.trigger.innerHTML = 'Copied!';
+        setTimeout(function() {
+            e.trigger.innerHTML = 'Copy';
+        }, 2000);
+    });
+});
+</script>
+
+<style>
+.timeline {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 40px;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+}
+
+.timeline-item:not(:last-child):before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 20px;
+    width: 2px;
+    height: calc(100% + 10px);
+    background-color: #dee2e6;
+}
+</style>
+{% endblock %} 

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}My Groups{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>My Groups</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'groups:create_group' %}" class="btn btn-primary">Create Group</a>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for group in groups %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">{{ group.name }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ group.description|truncatewords:30 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Members: {{ group.groupmember_set.count }}
+                            </small>
+                            {% if group.manager == user %}
+                                <span class="badge bg-primary">Manager</span>
+                            {% elif group.authorized_manager == user %}
+                                <span class="badge bg-info">Authorized Manager</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'groups:group_detail' group.id %}" 
+                           class="btn btn-primary btn-sm">View Group</a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col">
+                <div class="alert alert-info">
+                    You are not a member of any groups yet.
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

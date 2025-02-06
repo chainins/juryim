@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+            <div class="sidebar-sticky">
+                <ul class="nav flex-column">
+                    {% if perms.gambling.manage_games %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'games' %}active{% endif %}" 
+                           href="{% url 'management:games' %}">
+                            Games Management
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if perms.gambling.manage_bets %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'bets' %}active{% endif %}"
+                           href="{% url 'management:bets' %}">
+                            Bets Management
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if perms.financial.manage_accounts %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'accounts' %}active{% endif %}"
+                           href="{% url 'management:accounts' %}">
+                            Financial Accounts
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if perms.financial.manage_withdrawals %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if section == 'withdrawals' %}active{% endif %}"
+                           href="{% url 'management:withdrawals' %}">
+                            Withdrawal Requests
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+            {% block management_content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% endblock %} 

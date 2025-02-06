@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Deposit Address{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Your Deposit Address</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning mb-4">
+                        <strong>Important:</strong>
+                        <ul class="mb-0">
+                            <li>Send only {{ network }} to this address</li>
+                            <li>Minimum confirmations required: 3</li>
+                            <li>This address is unique to your account</li>
+                        </ul>
+                    </div>
+
+                    <div class="deposit-address mb-4">
+                        <label class="form-label">Deposit Address ({{ network }})</label>
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   value="{{ address.address }}" 
+                                   readonly>
+                            <button class="btn btn-outline-secondary copy-btn" 
+                                    data-clipboard-text="{{ address.address }}">
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="text-center mb-4">
+                        <div id="qrcode"></div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h5>Processing Times</h5>
+                        <ul class="mb-0">
+                            <li>Deposits are credited after 3 network confirmations</li>
+                            <li>Typical processing time: 10-30 minutes</li>
+                            <li>Large deposits may require additional verification</li>
+                        </ul>
+                    </div>
+
+                    <div class="text-end">
+                        <a href="{% url 'financial:dashboard' %}" class="btn btn-primary">
+                            Return to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.8/clipboard.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize QR Code
+    new QRCode(document.getElementById('qrcode'), {
+        text: '{{ address.address }}',
+        width: 128,
+        height: 128
+    });
+    
+    // Initialize clipboard.js
+    var clipboard = new ClipboardJS('.copy-btn');
+    
+    clipboard.on('success', function(e) {
+        e.trigger.innerHTML = 'Copied!';
+        setTimeout(function() {
+            e.trigger.innerHTML = 'Copy';
+        }, 2000);
+    });
+});
+</script>
+{% endblock %} 

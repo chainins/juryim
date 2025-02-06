@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}API Key Created{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">API Key Created Successfully</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <strong>Important:</strong> Please save your API secret key now. 
+                        You won't be able to see it again!
+                    </div>
+
+                    <div class="mb-4">
+                        <h5>API Key Details</h5>
+                        <div class="mb-3">
+                            <label class="form-label">API Key</label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       class="form-control" 
+                                       value="{{ api_key.key }}" 
+                                       readonly>
+                                <button class="btn btn-outline-secondary copy-btn" 
+                                        data-clipboard-text="{{ api_key.key }}">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">API Secret</label>
+                            <div class="input-group">
+                                <input type="text" 
+                                       class="form-control" 
+                                       value="{{ secret }}" 
+                                       readonly>
+                                <button class="btn btn-outline-secondary copy-btn" 
+                                        data-clipboard-text="{{ secret }}">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <a href="{% url 'security:manage_api_keys' %}" class="btn btn-primary">
+                            Done
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.8/clipboard.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var clipboard = new ClipboardJS('.copy-btn');
+    
+    clipboard.on('success', function(e) {
+        e.trigger.innerHTML = 'Copied!';
+        setTimeout(function() {
+            e.trigger.innerHTML = 'Copy';
+        }, 2000);
+    });
+});
+</script>
+{% endblock %} 

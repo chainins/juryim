@@ -1,0 +1,49 @@
+{% extends "management/base.html" %}
+
+{% block management_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Withdrawal Requests</h1>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Amount</th>
+                <th>Fee</th>
+                <th>Network</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for withdrawal in object_list %}
+            <tr>
+                <td>{{ withdrawal.id }}</td>
+                <td>{{ withdrawal.account.user.username }}</td>
+                <td>{{ withdrawal.amount }}</td>
+                <td>{{ withdrawal.fee }}</td>
+                <td>{{ withdrawal.network }}</td>
+                <td>{{ withdrawal.status }}</td>
+                <td>{{ withdrawal.created_at }}</td>
+                <td>
+                    {% if withdrawal.status == 'pending' %}
+                    <form method="post" class="d-inline" action="{% url 'financial_management:approve_withdrawal' withdrawal.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                    </form>
+                    <form method="post" class="d-inline" action="{% url 'financial_management:reject_withdrawal' withdrawal.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

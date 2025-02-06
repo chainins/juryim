@@ -1,0 +1,47 @@
+{% extends "management/base.html" %}
+
+{% block management_content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Games Management</h1>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Total Pool</th>
+                <th>Players</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for game in games %}
+            <tr>
+                <td>{{ game.title }}</td>
+                <td>{{ game.game_type }}</td>
+                <td>{{ game.status }}</td>
+                <td>{{ game.total_pool }}</td>
+                <td>{{ game.unique_players }}</td>
+                <td>{{ game.start_time }}</td>
+                <td>{{ game.end_time }}</td>
+                <td>
+                    <div class="btn-group">
+                        <a href="{% url 'management:game_detail' game.id %}" 
+                           class="btn btn-sm btn-outline-secondary">View</a>
+                        {% if game.status == 'pending' %}
+                        <a href="{% url 'management:game_edit' game.id %}"
+                           class="btn btn-sm btn-outline-primary">Edit</a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %} 

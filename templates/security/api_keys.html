@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}API Keys{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Create New API Key</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label">
+                                        Key Name
+                                    </label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                        <div class="alert alert-danger">
+                                            {{ form.name.errors }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.expires_at.id_for_label }}" class="form-label">
+                                        Expiration Date (Optional)
+                                    </label>
+                                    {{ form.expires_at }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Permissions</label>
+                            <div class="permissions-group">
+                                {{ form.permissions }}
+                            </div>
+                            {% if form.permissions.errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.permissions.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Create API Key</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Active API Keys</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Key</th>
+                                    <th>Permissions</th>
+                                    <th>Created</th>
+                                    <th>Last Used</th>
+                                    <th>Expires</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for key in api_keys %}
+                                    {% if key.is_active %}
+                                        <tr>
+                                            <td>{{ key.name }}</td>
+                                            <td>
+                                                <code>{{ key.key|truncatechars:16 }}</code>
+                                            </td>
+                                            <td>
+                                                {% for perm in key.permissions %}
+                                                    <span class="badge bg-info">{{ perm }}</span>
+                                                {% endfor %}
+                                            </td>
+                                            <td>{{ key.created_at|date:"M d, Y" }}</td>
+                                            <td>
+                                                {% if key.last_used %}
+                                                    {{ key.last_used|date:"M d, Y H:i" }}
+                                                {% else %}
+                                                    Never
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if key.expires_at %}
+                                                    {{ key.expires_at|date:"M d, Y" }}
+                                                {% else %}
+                                                    Never
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <form method="post" 
+                                                      action="{% url 'security:revoke_api_key' key.id %}"
+                                                      class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" 
+                                                            class="btn btn-danger btn-sm"
+                                                            onclick="return confirm('Are you sure you want to revoke this API key?')">
+                                                        Revoke
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            No active API keys.
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,106 @@
+{% extends "gambling/base.html" %}
+
+{% block gambling_content %}
+<div class="game-list">
+    <div class="filters">
+        <form method="get" class="filter-form">
+            <div class="filter-group">
+                <label for="status">Status:</label>
+                <select name="status" id="status">
+                    <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Filter</button>
+        </form>
+    </div>
+
+    <div class="game-grid">
+        {% for game in games %}
+        <div class="game-card">
+            <div class="game-header">
+                <h3>{{ game.title }}</h3>
+                <span class="game-type badge badge-{{ game.game_type }}">{{ game.get_game_type_display }}</span>
+            </div>
+            
+            <div class="game-info">
+                <p>{{ game.description|truncatewords:20 }}</p>
+                <div class="game-stats">
+                    <div class="stat">
+                        <span class="label">Pool:</span>
+                        <span class="value">{{ game.total_pool }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Bets:</span>
+                        <span class="value">{{ game.total_bets }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">Players:</span>
+                        <span class="value">{{ game.unique_players }}</span>
+                    </div>
+                </div>
+                
+                {% if game.status == 'active' %}
+                <div class="time-remaining" data-end-time="{{ game.end_time|date:'c' }}">
+                    Time remaining: <span class="countdown"></span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="game-footer">
+                <a href="{% url 'gambling:game_detail' game.id %}" class="btn btn-primary">
+                    {% if game.status == 'active' %}Place Bet{% else %}View Results{% endif %}
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="no-games">
+            <p>No games found.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if games.has_other_pages %}
+    <div class="pagination">
+        {% if games.has_previous %}
+        <a href="?page={{ games.previous_page_number }}&status={{ status }}" class="btn btn-outline">&laquo; Previous</a>
+        {% endif %}
+        
+        <span class="current-page">
+            Page {{ games.number }} of {{ games.paginator.num_pages }}
+        </span>
+        
+        {% if games.has_next %}
+        <a href="?page={{ games.next_page_number }}&status={{ status }}" class="btn btn-outline">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update countdowns every second
+        setInterval(function() {
+            document.querySelectorAll('.time-remaining').forEach(function(el) {
+                const endTime = new Date(el.dataset.endTime);
+                const now = new Date();
+                const diff = endTime - now;
+                
+                if (diff <= 0) {
+                    el.querySelector('.countdown').textContent = 'Ended';
+                    return;
+                }
+                
+                const minutes = Math.floor(diff / 60000);
+                const seconds = Math.floor((diff % 60000) / 1000);
+                el.querySelector('.countdown').textContent = 
+                    `${minutes}m ${seconds}s`;
+            });
+        }, 1000);
+    });
+</script>
+{% endblock %} 

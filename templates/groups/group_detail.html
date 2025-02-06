@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <!-- Group Info -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">{{ group.name }}</h4>
+                </div>
+                <div class="card-body">
+                    <p>{{ group.description }}</p>
+                    <hr>
+                    <h5>Members</h5>
+                    <ul class="list-group">
+                        {% for member in members %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ member.user.username }}
+                                {% if member.user == group.manager %}
+                                    <span class="badge bg-primary">Manager</span>
+                                {% elif member.user == group.authorized_manager %}
+                                    <span class="badge bg-info">Auth Manager</span>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Group Funds -->
+            {% if is_manager %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Group Funds</h5>
+                    </div>
+                    <div class="card-body">
+                        {% for fund in funds %}
+                            <div class="mb-3">
+                                <h6>{{ fund.name }}</h6>
+                                <p class="mb-1">{{ fund.description }}</p>
+                                <strong>Balance: {{ fund.balance }}</strong>
+                            </div>
+                        {% empty %}
+                            <p>No funds created yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Active Votes and Chat -->
+        <div class="col-md-8">
+            <!-- Active Votes -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Active Votes</h5>
+                    {% if is_manager %}
+                        <a href="{% url 'groups:create_vote' group.id %}" 
+                           class="btn btn-primary btn-sm">Create Vote</a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% for vote in active_votes %}
+                        <div class="mb-4">
+                            <h6>{{ vote.title }}</h6>
+                            <p>{{ vote.description }}</p>
+                            <form method="post" action="{% url 'groups:submit_vote' vote.id %}">
+                                {% csrf_token %}
+                                {% for option in vote.options %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" 
+                                               name="option" value="{{ option }}" 
+                                               id="option_{{ forloop.counter }}">
+                                        <label class="form-check-label" for="option_{{ forloop.counter }}">
+                                            {{ option }}
+                                        </label>
+                                    </div>
+                                {% endfor %}
+                                <button type="submit" class="btn btn-primary btn-sm mt-2">Vote</button>
+                            </form>
+                            <small class="text-muted">
+                                Deadline: {{ vote.deadline|date:"M d, Y H:i" }}
+                            </small>
+                        </div>
+                    {% empty %}
+                        <p>No active votes.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Chat Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Group Chat</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chat-messages mb-3" style="max-height: 400px; overflow-y: auto;">
+                        {% for chat in recent_chats %}
+                            <div class="mb-2">
+                                <strong>{{ chat.user.username }}:</strong>
+                                <span>{{ chat.message }}</span>
+                                <small class="text-muted d-block">
+                                    {{ chat.created_at|date:"M d, Y H:i" }}
+                                </small>
+                            </div>
+                        {% empty %}
+                            <p>No messages yet.</p>
+                        {% endfor %}
+                    </div>
+                    <form method="post" action="{% url 'groups:chat_message' group.id %}">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <input type="text" name="message" class="form-control" 
+                                   placeholder="Type your message...">
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

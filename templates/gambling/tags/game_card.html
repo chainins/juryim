@@ -1,0 +1,46 @@
+<div class="card h-100">
+    <div class="card-body">
+        <h5 class="card-title">{{ game.title }}</h5>
+        <h6 class="card-subtitle mb-2 text-muted">{{ game.game_type|title }}</h6>
+        
+        <div class="game-info mb-3">
+            <p class="card-text">{{ game.description }}</p>
+            <ul class="list-unstyled">
+                <li><strong>Total Pool:</strong> {{ game.total_pool }}</li>
+                <li><strong>Min Bet:</strong> {{ game.minimum_single_bet }}</li>
+                <li><strong>Max Bet:</strong> {{ game.maximum_single_bet }}</li>
+                <li><strong>Fee:</strong> {{ game.fee_percentage }}%</li>
+            </ul>
+        </div>
+
+        {% if game.status == 'active' %}
+            <div class="countdown mb-3" data-end-time="{{ game.end_time|date:'c' }}">
+                Time remaining: <span class="time-left">{{ game|time_until_end }}</span>
+            </div>
+        {% endif %}
+
+        {% if user_stats %}
+            <div class="user-stats mb-3">
+                <small class="text-muted">Your activity:</small>
+                <ul class="list-unstyled">
+                    <li>Bets: {{ user_stats.total_bets }}</li>
+                    <li>Total: {{ user_stats.total_amount }}</li>
+                    {% if user_stats.won_amount %}
+                        <li class="text-success">Won: {{ user_stats.won_amount }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="text-end">
+            <a href="{% url 'gambling:game_detail' game.id %}" 
+               class="btn btn-primary">
+                {% if game.status == 'active' %}
+                    Place Bet
+                {% else %}
+                    View Results
+                {% endif %}
+            </a>
+        </div>
+    </div>
+</div> 

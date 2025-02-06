@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}Create New Game{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Create New Gambling Game</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">
+                                Game Title
+                            </label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.title.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                Description
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.description.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.game_type.id_for_label }}" class="form-label">
+                                    Game Type
+                                </label>
+                                {{ form.game_type }}
+                                {% if form.game_type.errors %}
+                                    <div class="alert alert-danger">
+                                        {{ form.game_type.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.fee_percentage.id_for_label }}" class="form-label">
+                                    Fee Percentage
+                                </label>
+                                {{ form.fee_percentage }}
+                                {% if form.fee_percentage.errors %}
+                                    <div class="alert alert-danger">
+                                        {{ form.fee_percentage.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.minimum_single_bet.id_for_label }}" class="form-label">
+                                    Minimum Bet
+                                </label>
+                                {{ form.minimum_single_bet }}
+                                {% if form.minimum_single_bet.errors %}
+                                    <div class="alert alert-danger">
+                                        {{ form.minimum_single_bet.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.maximum_single_bet.id_for_label }}" class="form-label">
+                                    Maximum Bet
+                                </label>
+                                {{ form.maximum_single_bet }}
+                                {% if form.maximum_single_bet.errors %}
+                                    <div class="alert alert-danger">
+                                        {{ form.maximum_single_bet.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.start_time.id_for_label }}" class="form-label">
+                                    Start Time
+                                </label>
+                                {{ form.start_time }}
+                                {% if form.start_time.errors %}
+                                    <div class="alert alert-danger">
+                                        {{ form.start_time.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.end_time.id_for_label }}" class="form-label">
+                                    End Time
+                                </label>
+                                {{ form.end_time }}
+                                {% if form.end_time.errors %}
+                                    <div class="alert alert-danger">
+                                        {{ form.end_time.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <a href="{% url 'gambling:game_list' %}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                Create Game
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-control, .form-select {
+        margin-bottom: 0.5rem;
+    }
+    textarea.form-control {
+        min-height: 100px;
+    }
+</style>
+{% endblock %} 

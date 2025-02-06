@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Notification Preferences{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Notification Preferences</h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <h5>Delivery Methods</h5>
+                            <div class="form-check mb-2">
+                                {{ form.email_notifications }}
+                                <label class="form-check-label" for="{{ form.email_notifications.id_for_label }}">
+                                    Email Notifications
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                {{ form.browser_notifications }}
+                                <label class="form-check-label" for="{{ form.browser_notifications.id_for_label }}">
+                                    Browser Notifications
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>Notification Types</h5>
+                            <div class="form-check mb-2">
+                                {{ form.task_updates }}
+                                <label class="form-check-label" for="{{ form.task_updates.id_for_label }}">
+                                    Task Updates
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                {{ form.group_updates }}
+                                <label class="form-check-label" for="{{ form.group_updates.id_for_label }}">
+                                    Group Updates
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                {{ form.gambling_updates }}
+                                <label class="form-check-label" for="{{ form.gambling_updates.id_for_label }}">
+                                    Gambling Updates
+                                </label>
+                            </div>
+                            <div class="form-check mb-3">
+                                {{ form.financial_updates }}
+                                <label class="form-check-label" for="{{ form.financial_updates.id_for_label }}">
+                                    Financial Updates
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5>Priority Settings</h5>
+                            <div class="mb-3">
+                                <label for="{{ form.minimum_priority.id_for_label }}" class="form-label">
+                                    Minimum Priority Level
+                                </label>
+                                {{ form.minimum_priority }}
+                                <div class="form-text">
+                                    You will only receive notifications at or above this priority level.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-end">
+                            <a href="{% url 'notifications:list' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Save Preferences</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

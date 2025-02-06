@@ -1,0 +1,31 @@
+<div class="bet-history">
+    {% for bet in bets %}
+        <div class="bet-item mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>{{ bet.game.title }}</strong>
+                    <br>
+                    <small class="text-muted">
+                        {{ bet.amount }} on {{ bet.bet_data|format_bet_data:bet.game.game_type }}
+                    </small>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-{{ bet.status }}">
+                        {{ bet.status|title }}
+                    </span>
+                    <br>
+                    <small class="text-muted">
+                        {{ bet.placed_at|date:"M d, H:i" }}
+                    </small>
+                </div>
+            </div>
+            {% if bet.status == 'won' and bet.win_amount %}
+                <div class="text-success">
+                    <small>Won: {{ bet.win_amount }}</small>
+                </div>
+            {% endif %}
+        </div>
+    {% empty %}
+        <p class="text-muted">No bets placed yet.</p>
+    {% endfor %}
+</div> 

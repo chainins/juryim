@@ -1,0 +1,35 @@
+{% extends "email/base.html" %}
+
+{% block content %}
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <h2>Bet Result</h2>
+    
+    <p>Hello,</p>
+    
+    <p>The results are in for your bet on "{{ game.title }}"!</p>
+    
+    <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
+        <h3>Result Details:</h3>
+        <ul style="list-style: none; padding: 0;">
+            <li><strong>Status:</strong> 
+                <span style="font-weight: bold" class="{{ bet.status|yesno:'text-success,text-danger' }}">
+                    {{ bet.status|title }}
+                </span>
+            </li>
+            <li><strong>Original Bet:</strong> {{ bet.amount }}</li>
+            {% if win_amount %}
+                <li><strong>Win Amount:</strong> {{ win_amount }}</li>
+            {% endif %}
+            <li><strong>Game Type:</strong> {{ game.game_type }}</li>
+            <li><strong>Game Result:</strong> {{ game.result }}</li>
+        </ul>
+    </div>
+    
+    <p>
+        <a href="{{ site_url }}{% url 'gambling:game_detail' game.id %}" 
+           style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            View Details
+        </a>
+    </p>
+</div>
+{% endblock %} 

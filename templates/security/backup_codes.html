@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}2FA Backup Codes{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Save Your Backup Codes</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <strong>Important:</strong> Save these backup codes in a secure place. 
+                        You won't be able to see them again! Each code can only be used once.
+                    </div>
+
+                    <div class="backup-codes mb-4">
+                        <div class="row">
+                            {% for code in backup_codes %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="input-group">
+                                        <input type="text" 
+                                               class="form-control" 
+                                               value="{{ code }}" 
+                                               readonly>
+                                        <button class="btn btn-outline-secondary copy-btn" 
+                                                data-clipboard-text="{{ code }}">
+                                            Copy
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <button class="btn btn-secondary" id="printCodes">
+                            <i class="bi bi-printer"></i> Print Codes
+                        </button>
+                        <button class="btn btn-secondary" id="downloadCodes">
+                            <i class="bi bi-download"></i> Download Codes
+                        </button>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h5>What are backup codes?</h5>
+                        <p>
+                            Backup codes are used to access your account if you cannot 
+                            receive two-factor authentication codes. Each backup code can 
+                            only be used once.
+                        </p>
+                        <p class="mb-0">
+                            Treat your backup codes with the same level of security as your password!
+                        </p>
+                    </div>
+
+                    <div class="text-end">
+                        <a href="{% url 'security:dashboard' %}" class="btn btn-primary">
+                            I've Saved My Backup Codes
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.8/clipboard.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize clipboard.js
+    var clipboard = new ClipboardJS('.copy-btn');
+    
+    clipboard.on('success', function(e) {
+        e.trigger.innerHTML = 'Copied!';
+        setTimeout(function() {
+            e.trigger.innerHTML = 'Copy';
+        }, 2000);
+    });
+
+    // Print backup codes
+    document.getElementById('printCodes').addEventListener('click', function() {
+        window.print();
+    });
+
+    // Download backup codes
+    document.getElementById('downloadCodes').addEventListener('click', function() {
+        var codes = [];
+        document.querySelectorAll('.backup-codes input').forEach(function(input) {
+            codes.push(input.value);
+        });
+        
+        var content = "2FA Backup Codes\n\n" + codes.join("\n");
+        var blob = new Blob([content], { type: 'text/plain' });
+        var url = window.URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = '2fa_backup_codes.txt';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+});
+</script>
+
+<style media="print">
+    .no-print {
+        display: none !important;
+    }
+    .backup-codes {
+        page-break-inside: avoid;
+    }
+    .btn {
+        display: none !important;
+    }
+</style>
+{% endblock %} 

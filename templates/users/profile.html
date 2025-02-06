@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>Profile Information</h4>
+            </div>
+            <div class="card-body">
+                <p><strong>Username:</strong> {{ user.username }}</p>
+                <p><strong>Email:</strong> {{ user.email }}
+                    {% if user.email_verified %}
+                        <span class="badge bg-success">Verified</span>
+                    {% else %}
+                        <span class="badge bg-warning">Unverified</span>
+                    {% endif %}
+                </p>
+                <p><strong>Credit Score:</strong> {{ user.credit_score }}</p>
+                <p><strong>Role:</strong> {{ user.get_role_display }}</p>
+                <p><strong>Invitation Code:</strong> {{ user.invitation_code }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>Security Questions</h4>
+            </div>
+            <div class="card-body">
+                {% if security_questions %}
+                    <ul class="list-group">
+                        {% for question in security_questions %}
+                            <li class="list-group-item">{{ question.question_text }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No security questions set. 
+                        <a href="{% url 'users:security_questions' %}" class="btn btn-primary btn-sm">
+                            Add Security Questions
+                        </a>
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

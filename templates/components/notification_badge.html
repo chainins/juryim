@@ -1,0 +1,60 @@
+{% load static %}
+
+<div class="notification-badge" id="notificationBadge">
+    <a href="{% url 'notifications:list' %}" class="position-relative">
+        <i class="bi bi-bell"></i>
+        {% if unread_count > 0 %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                {{ unread_count }}
+                <span class="visually-hidden">unread notifications</span>
+            </span>
+        {% endif %}
+    </a>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function updateNotificationCount() {
+        fetch('{% url "notifications:unread_count" %}')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('notificationBadge');
+                if (data.count > 0) {
+                    badge.innerHTML = `
+                        <a href="{% url 'notifications:list' %}" class="position-relative">
+                            <i class="bi bi-bell"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                ${data.count}
+                                <span class="visually-hidden">unread notifications</span>
+                            </span>
+                        </a>
+                    `;
+                } else {
+                    badge.innerHTML = `
+                        <a href="{% url 'notifications:list' %}">
+                            <i class="bi bi-bell"></i>
+                        </a>
+                    `;
+                }
+            });
+    }
+
+    // Update notification count every minute
+    setInterval(updateNotificationCount, 60000);
+});
+</script>
+
+<style>
+.notification-badge {
+    display: inline-block;
+}
+
+.notification-badge a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.notification-badge .bi-bell {
+    font-size: 1.2rem;
+}
+</style> 

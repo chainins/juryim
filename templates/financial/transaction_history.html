@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Transaction History{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h4 class="card-title mb-0">Transaction History</h4>
+                </div>
+                <div class="col-auto">
+                    <div class="btn-group">
+                        <a href="?type=deposit" 
+                           class="btn btn-outline-primary {% if request.GET.type == 'deposit' %}active{% endif %}">
+                            Deposits
+                        </a>
+                        <a href="?type=withdrawal" 
+                           class="btn btn-outline-primary {% if request.GET.type == 'withdrawal' %}active{% endif %}">
+                            Withdrawals
+                        </a>
+                        <a href="?type=bet_win" 
+                           class="btn btn-outline-primary {% if request.GET.type == 'bet_win' %}active{% endif %}">
+                            Wins
+                        </a>
+                        <a href="?type=bet_loss" 
+                           class="btn btn-outline-primary {% if request.GET.type == 'bet_loss' %}active{% endif %}">
+                            Losses
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Fee</th>
+                            <th>Status</th>
+                            <th>Reference</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                            <tr>
+                                <td>{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    <span class="badge bg-{{ transaction.transaction_type }}">
+                                        {{ transaction.get_transaction_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if transaction.transaction_type in 'deposit,bet_win,refund' %}
+                                        <span class="text-success">+{{ transaction.amount }}</span>
+                                    {% else %}
+                                        <span class="text-danger">-{{ transaction.amount }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if transaction.fee %}
+                                        {{ transaction.fee }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ transaction.status }}">
+                                        {{ transaction.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {{ transaction.reference_id|default:"-" }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <small>{{ transaction.description|truncatechars:50 }}</small>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    No transactions found.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
