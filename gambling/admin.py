@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db import models
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils import timezone
@@ -6,58 +7,29 @@ from .models import GamblingGame, GamblingBet, GamblingTransaction
 
 @admin.register(GamblingGame)
 class GamblingGameAdmin(admin.ModelAdmin):
-    list_display = [
-        'title', 'game_type', 'status', 'total_pool',
-        'total_bets', 'unique_players', 'start_time',
-        'end_time', 'created_at'
-    ]
-    list_filter = ['status', 'game_type', 'created_at']
-    search_fields = ['title', 'description']
-    readonly_fields = [
-        'total_pool', 'total_bets', 'unique_players',
-        'created_at', 'result'
-    ]
-    
-    fieldsets = (
-        (None, {
-            'fields': ('title', 'description', 'game_type', 'status')
-        }),
-        ('Game Settings', {
-            'fields': (
-                'minimum_single_bet', 'maximum_single_bet',
-                'fee_percentage'
-            )
-        }),
-        ('Timing', {
-            'fields': ('start_time', 'end_time')
-        }),
-        ('Statistics', {
-            'fields': (
-                'total_pool', 'total_bets', 'unique_players',
-                'result', 'created_at'
-            )
-        })
-    )
-    
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.with_stats()
+    list_display = ('title', 'game_type', 'status', 'get_total_pool', 'get_total_bets', 'get_unique_players')
+    list_filter = ('game_type', 'status', 'created_at')
+    search_fields = ('title', 'description')
+    readonly_fields = ('get_total_pool', 'get_total_bets', 'get_unique_players')
+
+    def get_total_pool(self, obj):
+        return obj.bets.aggregate(total=models.Sum('amount'))['total'] or 0
+    get_total_pool.short_description = 'Total Pool'
+
+    def get_total_bets(self, obj):
+        return obj.bets.count()
+    get_total_bets.short_description = 'Total Bets'
+
+    def get_unique_players(self, obj):
+        return obj.bets.values('user').distinct().count()
+    get_unique_players.short_description = 'Unique Players'
 
 @admin.register(GamblingBet)
 class GamblingBetAdmin(admin.ModelAdmin):
-    list_display = [
-        'id', 'game_link', 'user_link', 'amount',
-        'fee_amount', 'status', 'placed_at'
-    ]
-    list_filter = ['status', 'placed_at', 'game__game_type']
-    search_fields = [
-        'user__username', 'game__title',
-        'bet_data', 'transaction_id'
-    ]
-    readonly_fields = [
-        'placed_at', 'result_time', 'transaction_id',
-        'win_amount'
-    ]
+    list_display = ('game', 'user', 'amount', 'status', 'placed_at')
+    list_filter = ('status', 'placed_at')
+    search_fields = ('user__username', 'game__title')
+    readonly_fields = ('placed_at', 'result_time')
     
     def game_link(self, obj):
         url = reverse(
@@ -89,17 +61,10 @@ class GamblingBetAdmin(admin.ModelAdmin):
 
 @admin.register(GamblingTransaction)
 class GamblingTransactionAdmin(admin.ModelAdmin):
-    list_display = [
-        'id', 'bet_link', 'transaction_type',
-        'amount', 'timestamp'
-    ]
-    list_filter = ['transaction_type', 'timestamp']
-    search_fields = [
-        'bet__game__title',
-        'bet__user__username',
-        'bet__user__email'
-    ]
-    readonly_fields = ['timestamp']
+    list_display = ('bet', 'transaction_type', 'amount', 'timestamp')
+    list_filter = ('transaction_type', 'timestamp')
+    search_fields = ('bet__user__username', 'bet__game__title')
+    readonly_fields = ('timestamp',)
     
     def bet_link(self, obj):
         url = reverse('admin:gambling_gamblingbet_change', args=[obj.bet.id])

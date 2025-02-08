@@ -1,6 +1,8 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import WithdrawalRequest
+import json
+from channels.generic.websocket import AsyncWebsocketConsumer
 
 class ManagementConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
@@ -51,4 +53,94 @@ class ManagementConsumer(AsyncJsonWebsocketConsumer):
             'type': 'notification',
             'message': event['message'],
             'level': event['level']
-        }) 
+        })
+
+class WithdrawalConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.user = self.scope["user"]
+        if not self.user.is_authenticated:
+            await self.close()
+            return
+
+        # Get withdrawal ID from URL path
+        self.withdrawal_id = self.scope['url_route']['kwargs']['withdrawal_id']
+        
+        # Verify withdrawal belongs to user
+        if not await self.can_access_withdrawal():
+            await self.close()
+            return
+
+        self.room_name = f"withdrawal_{self.withdrawal_id}"
+        self.room_group_name = f"withdrawal_updates_{self.withdrawal_id}"
+
+        # Join room group
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        # Leave room group
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def receive(self, text_data):
+        """Handle incoming messages (if needed)"""
+        pass
+
+    async def withdrawal_update(self, event):
+        """Handle withdrawal update message"""
+        # Send message to WebSocket
+        await self.send(text_data=json.dumps({
+            'type': 'withdrawal_update',
+            'data': event['data']
+        }))
+
+    @database_sync_to_async
+    def can_access_withdrawal(self):
+        """Check if user can access this withdrawal"""
+        try:
+            withdrawal = WithdrawalRequest.objects.get(
+                id=self.withdrawal_id,
+                account__user=self.user
+            )
+            return True
+        except WithdrawalRequest.DoesNotExist:
+            return False
+
+class DepositConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.user = self.scope["user"]
+        if not self.user.is_authenticated:
+            await self.close()
+            return
+
+        self.room_name = f"deposit_{self.user.id}"
+        self.room_group_name = f"deposit_updates_{self.user.id}"
+
+        # Join room group
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        # Leave room group
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def deposit_update(self, event):
+        """Handle deposit update message"""
+        # Send message to WebSocket
+        await self.send(text_data=json.dumps({
+            'type': 'deposit_update',
+            'data': event['data']
+        })) 

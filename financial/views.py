@@ -11,7 +11,10 @@ from .models import (
 from groups.models import GroupFund
 from decimal import Decimal
 from .forms import WithdrawalForm, DepositAddressForm
-from .services import FinancialService
+from .services import FinancialService, WithdrawalService
+from .utils import generate_qr_code  # Import our QR code utility
+from django.utils.decorators import method_decorator
+from django.conf import settings
 
 class FinancialViews:
     @staticmethod
@@ -45,79 +48,140 @@ class FinancialViews:
         })
 
     @staticmethod
-    @login_required
+    @method_decorator(login_required)
     def withdrawal(request):
-        account = FinancialAccount.objects.get(user=request.user)
-        provider = PaymentProvider.objects.filter(is_active=True).first()
+        # Initialize withdrawal service
+        withdrawal_service = WithdrawalService()
+        
+        # Get user's balances
+        balances = {
+            'BTC': request.user.financialaccount.balance,
+            'ETH': request.user.financialaccount.balance,
+            'USDT': request.user.financialaccount.balance,
+        }
+        
+        # Available networks for withdrawal
+        networks = [
+            {
+                'code': 'BTC',
+                'name': 'Bitcoin',
+                'fee': settings.NETWORK_FEES['BTC'],
+                'min_amount': settings.MIN_DEPOSIT['BTC'],
+            },
+            {
+                'code': 'ETH',
+                'name': 'Ethereum',
+                'fee': settings.NETWORK_FEES['ETH'],
+                'min_amount': settings.MIN_DEPOSIT['ETH'],
+            },
+            {
+                'code': 'USDT',
+                'name': 'USDT (TRC20)',
+                'fee': settings.NETWORK_FEES['USDT'],
+                'min_amount': settings.MIN_DEPOSIT['USDT'],
+            },
+        ]
         
         if request.method == 'POST':
-            form = WithdrawalForm(
-                request.POST,
-                account=account,
-                provider=provider
-            )
-            if form.is_valid():
-                try:
-                    withdrawal = form.save(commit=False)
-                    withdrawal.account = account
-                    withdrawal.fee = FinancialService.calculate_withdrawal_fee(
-                        withdrawal.amount,
-                        provider
-                    )
-                    withdrawal.save()
-                    
-                    FinancialService.process_withdrawal(withdrawal)
-                    messages.success(request, 'Withdrawal request submitted successfully')
-                    return redirect('financial:withdrawal_status', withdrawal.id)
-                except ValueError as e:
-                    messages.error(request, str(e))
-        else:
-            form = WithdrawalForm(account=account, provider=provider)
+            try:
+                # Get form data
+                network = request.POST.get('network')
+                amount = Decimal(request.POST.get('amount'))
+                address = request.POST.get('address')
+                
+                # Create withdrawal request
+                withdrawal = withdrawal_service.create_withdrawal_request(
+                    user=request.user,
+                    network=network,
+                    amount=amount,
+                    address=address
+                )
+                
+                messages.success(request, 'Withdrawal request submitted successfully')
+                return redirect('financial:withdrawal_status', withdrawal_id=withdrawal.id)
+                
+            except ValueError as e:
+                messages.error(request, str(e))
+            except Exception as e:
+                messages.error(request, 'An error occurred. Please try again.')
+                print(f"Withdrawal error: {str(e)}")
         
-        return render(request, 'financial/withdrawal.html', {
-            'form': form,
-            'provider': provider
-        })
+        # Get recent withdrawals
+        recent_withdrawals = WithdrawalRequest.objects.filter(
+            account=request.user.financialaccount
+        ).order_by('-created_at')[:5]
+        
+        context = {
+            'balances': balances,
+            'networks': networks,
+            'recent_withdrawals': recent_withdrawals,
+        }
+        
+        return render(request, 'financial/withdrawal.html', context)
 
     @staticmethod
-    @login_required
+    @method_decorator(login_required)
     def withdrawal_status(request, withdrawal_id):
-        withdrawal = get_object_or_404(
-            WithdrawalRequest,
-            id=withdrawal_id,
-            account__user=request.user
-        )
-        return render(request, 'financial/withdrawal_status.html', {
-            'withdrawal': withdrawal
-        })
+        try:
+            withdrawal = WithdrawalRequest.objects.get(
+                id=withdrawal_id,
+                account=request.user.financialaccount
+            )
+            
+            context = {
+                'withdrawal': withdrawal,
+            }
+            
+            return render(request, 'financial/withdrawal_status.html', context)
+            
+        except WithdrawalRequest.DoesNotExist:
+            messages.error(request, 'Withdrawal request not found')
+            return redirect('financial:withdrawal')
 
     @staticmethod
     @login_required
     def deposit(request):
-        account = FinancialAccount.objects.get(user=request.user)
-        providers = PaymentProvider.objects.filter(is_active=True)
+        # Available networks for deposits
+        networks = [
+            {'code': 'BTC', 'name': 'Bitcoin'},
+            {'code': 'ETH', 'name': 'Ethereum'},
+            {'code': 'USDT', 'name': 'USDT (TRC20)'},
+        ]
         
-        if request.method == 'POST':
-            form = DepositAddressForm(
-                request.POST,
-                networks=[(p.provider_type, p.name) for p in providers]
-            )
-            if form.is_valid():
-                network = form.cleaned_data['network']
-                address = FinancialService.get_deposit_address(account, network)
-                return render(request, 'financial/deposit_address.html', {
-                    'address': address,
-                    'network': network
-                })
-        else:
-            form = DepositAddressForm(
-                networks=[(p.provider_type, p.name) for p in providers]
-            )
+        # Get selected network from query params
+        selected_network = request.GET.get('network')
         
-        return render(request, 'financial/deposit.html', {
-            'form': form,
-            'providers': providers
-        })
+        # Get or create deposit address for selected network
+        address = None
+        qr_code = None
+        if selected_network:
+            address, created = DepositAddress.objects.get_or_create(
+                account=request.user.financialaccount,
+                network=selected_network,
+                defaults={
+                    'min_deposit': '0.001' if selected_network in ['BTC', 'ETH'] else '1.00',
+                    'confirmations_required': 2 if selected_network == 'USDT' else 3
+                }
+            )
+            # Generate QR code for the address
+            if address:
+                qr_code = generate_qr_code(address.address)
+        
+        # Get recent deposits
+        recent_deposits = Transaction.objects.filter(
+            account=request.user.financialaccount,
+            transaction_type='deposit'
+        ).order_by('-created_at')[:5]
+        
+        context = {
+            'networks': networks,
+            'selected_network': selected_network,
+            'address': address,
+            'qr_code': qr_code,
+            'recent_deposits': recent_deposits,
+        }
+        
+        return render(request, 'financial/deposit.html', context)
 
     @staticmethod
     @login_required
@@ -205,4 +269,39 @@ class FinancialViews:
         account.frozen_balance -= amount
         account.balance += amount
         account.save()
-        return True 
+        return True
+
+@login_required
+def dashboard(request):
+    """Financial dashboard view"""
+    context = {
+        'balance': request.user.balance if hasattr(request.user, 'balance') else 0,
+        'transactions': Transaction.objects.filter(user=request.user).order_by('-created_at')[:5]
+    }
+    return render(request, 'financial/dashboard.html', context)
+
+@login_required
+def deposit(request):
+    """Deposit view"""
+    if request.method == 'POST':
+        amount = request.POST.get('amount')
+        # Add deposit logic here
+        messages.success(request, 'Deposit initiated successfully')
+        return redirect('financial_dashboard')
+    return render(request, 'financial/deposit.html')
+
+@login_required
+def withdraw(request):
+    """Withdraw view"""
+    if request.method == 'POST':
+        amount = request.POST.get('amount')
+        # Add withdrawal logic here
+        messages.success(request, 'Withdrawal initiated successfully')
+        return redirect('financial_dashboard')
+    return render(request, 'financial/withdraw.html')
+
+@login_required
+def transactions(request):
+    """Transaction history view"""
+    transactions = Transaction.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'financial/transactions.html', {'transactions': transactions}) 

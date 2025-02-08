@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card mt-5">
+                <div class="card-body">
+                    <h2 class="card-title mb-4">Security Questions</h2>
+                    
+                    {% if messages %}
+                    <div class="messages mb-4">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="current-questions mb-4">
+                        <h4>Your Security Questions</h4>
+                        {% if user_questions %}
+                            {% for q in user_questions %}
+                            <div class="question-item d-flex justify-content-between align-items-center border-bottom py-2">
+                                <div>{{ q.question.question_text }}</div>
+                                <form method="post" action="{% url 'delete_security_question' q.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No security questions set up yet.</p>
+                        {% endif %}
+                    </div>
+                    
+                    {% if user_questions.count < 5 %}
+                    <div class="add-question">
+                        <h4>Add New Security Question</h4>
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            {% for field in form %}
+                            <div class="form-group">
+                                {{ field.label_tag }}
+                                {{ field }}
+                                {% if field.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ field.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                            
+                            <button type="submit" class="btn btn-primary">Add Question</button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

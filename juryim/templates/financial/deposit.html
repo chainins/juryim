@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="deposit-container">
+    <h2>Deposit Funds</h2>
+    
+    <div class="network-selector">
+        <h3>Select Network</h3>
+        <div class="network-options">
+            {% for network in networks %}
+                <button class="network-button {% if network.code == selected_network %}active{% endif %}" 
+                        data-network="{{ network.code }}">
+                    {{ network.name }}
+                </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="deposit-address">
+        {% if address %}
+            <h3>Your Deposit Address</h3>
+            <div class="address-box">
+                <span class="address-text">{{ address.address }}</span>
+                <button class="copy-button" data-address="{{ address.address }}">Copy</button>
+            </div>
+            <div class="qr-code">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+            </div>
+            <div class="address-info">
+                <p>Network: <strong>{{ address.get_network_display }}</strong></p>
+                <p>Minimum Deposit: <strong>{{ address.min_deposit }}</strong></p>
+                <p>Confirmations Required: <strong>{{ address.confirmations_required }}</strong></p>
+            </div>
+        {% else %}
+            <p>Select a network to generate a deposit address.</p>
+        {% endif %}
+    </div>
+
+    <div class="deposit-history">
+        <h3>Recent Deposits</h3>
+        {% if recent_deposits %}
+            <ul class="deposit-list">
+                {% for deposit in recent_deposits %}
+                    <li>
+                        <span class="amount">{{ deposit.amount }} {{ deposit.network }}</span>
+                        <span class="status {{ deposit.status }}">{{ deposit.get_status_display }}</span>
+                        <span class="timestamp">{{ deposit.created_at|date:"Y-m-d H:i" }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No recent deposits</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // WebSocket Connection
+    const depositSocket = new WebSocket(
+        'ws://' + window.location.host + '/ws/financial/deposit/'
+    );
+
+    depositSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        if (data.type === 'deposit_update') {
+            // Update deposit status
+            const deposit = data.data;
+            updateDepositStatus(deposit);
+            
+            // Show notification
+            showNotification(
+                `Deposit ${deposit.amount} ${deposit.network} - ${deposit.status}`
+            );
+            
+            // Refresh deposit list if status is completed
+            if (deposit.status === 'completed') {
+                location.reload();
+            }
+        }
+    };
+
+    depositSocket.onclose = function(e) {
+        console.error('Deposit socket closed unexpectedly');
+    };
+
+    // Update deposit status in the list
+    function updateDepositStatus(deposit) {
+        const depositElement = document.querySelector(
+            `.deposit-list li[data-id="${deposit.id}"]`
+        );
+        if (depositElement) {
+            const statusElement = depositElement.querySelector('.status');
+            statusElement.textContent = deposit.status;
+            statusElement.className = `status ${deposit.status}`;
+        }
+    }
+
+    // Show notification
+    function showNotification(message) {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Remove notification after 5 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
+    }
+
+    // Copy address to clipboard
+    document.querySelectorAll('.copy-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const address = this.dataset.address;
+            navigator.clipboard.writeText(address).then(() => {
+                this.textContent = 'Copied!';
+                setTimeout(() => {
+                    this.textContent = 'Copy';
+                }, 2000);
+            });
+        });
+    });
+
+    // Network selection
+    document.querySelectorAll('.network-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const network = this.dataset.network;
+            window.location.href = `?network=${network}`;
+        });
+    });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ... existing styles ... */
+
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background-color: #4CAF50;
+        color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 1000;
+        animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %} 

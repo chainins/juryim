@@ -1,15 +1,21 @@
 from django.db import models
 from django.conf import settings
-from django.utils import timezone
-from decimal import Decimal
+from django.db.models import Sum, Count
 from tasks.models import ArbitrationTask
+
+class GamblingGameQuerySet(models.QuerySet):
+    def with_stats(self):
+        return self.annotate(
+            total_pool=Sum('bets__amount'),
+            total_bets=Count('bets'),
+            unique_players=Count('bets__user', distinct=True)
+        )
 
 class GamblingGame(models.Model):
     GAME_TYPES = (
-        ('dice', 'Dice Roll'),
+        ('dice', 'Dice'),
         ('coin', 'Coin Flip'),
-        ('roulette', 'Roulette'),
-        ('custom', 'Custom Game')
+        ('lottery', 'Lottery')
     )
     
     STATUS_CHOICES = (
@@ -22,89 +28,99 @@ class GamblingGame(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     game_type = models.CharField(max_length=20, choices=GAME_TYPES)
-    creator = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='created_games'
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
     )
-    total_pool = models.DecimalField(max_digits=18, decimal_places=8, default=Decimal('0'))
-    minimum_single_bet = models.DecimalField(max_digits=18, decimal_places=8)
-    maximum_single_bet = models.DecimalField(max_digits=18, decimal_places=8)
-    fee_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('1.00'))
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    minimum_single_bet = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1.00
+    )
+    maximum_single_bet = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=1000.00
+    )
+    fee_percentage = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=2.00
+    )
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
     result = models.JSONField(null=True, blank=True)
-    options = models.JSONField(default=dict)  # Game-specific options
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    arbitration_task = models.OneToOneField(
-        ArbitrationTask,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL
-    )
 
-    class Meta:
-        db_table = 'gambling_games'
-        ordering = ['-created_at']
+    objects = GamblingGameQuerySet.as_manager()
 
-    def calculate_winner(self):
-        """Calculate winner based on game type and result"""
-        if not self.result:
-            return None
-            
-        if self.game_type == 'dice':
-            winning_number = self.result.get('number')
-            return GamblingBet.objects.filter(
-                game=self,
-                bet_data__number=winning_number
-            )
-        elif self.game_type == 'coin':
-            winning_side = self.result.get('side')
-            return GamblingBet.objects.filter(
-                game=self,
-                bet_data__side=winning_side
-            )
-        return None
+    def __str__(self):
+        return self.title
 
 class GamblingBet(models.Model):
     STATUS_CHOICES = (
-        ('placed', 'Placed'),
+        ('pending', 'Pending'),
+        ('active', 'Active'),
         ('won', 'Won'),
         ('lost', 'Lost'),
-        ('refunded', 'Refunded')
+        ('cancelled', 'Cancelled')
     )
 
-    game = models.ForeignKey(GamblingGame, on_delete=models.CASCADE)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=18, decimal_places=8)
-    fee_amount = models.DecimalField(max_digits=18, decimal_places=8)
-    bet_data = models.JSONField()  # Game-specific bet data
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='placed')
+    game = models.ForeignKey(
+        GamblingGame,
+        on_delete=models.CASCADE,
+        related_name='bets'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='gambling_bets'
+    )
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    fee_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    bet_data = models.JSONField()
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending'
+    )
+    win_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    transaction_id = models.CharField(
+        max_length=100,
+        unique=True,
+        null=True,
+        blank=True
+    )
     placed_at = models.DateTimeField(auto_now_add=True)
     result_time = models.DateTimeField(null=True, blank=True)
 
-    class Meta:
-        db_table = 'gambling_bets'
-        ordering = ['-placed_at']
+    def __str__(self):
+        return f"{self.user.username}'s bet on {self.game.title}"
 
 class GamblingTransaction(models.Model):
     TRANSACTION_TYPES = (
-        ('bet_place', 'Bet Placement'),
-        ('bet_win', 'Bet Win'),
-        ('bet_refund', 'Bet Refund'),
-        ('fee', 'Fee')
+        ('bet', 'Bet Placed'),
+        ('win', 'Win'),
+        ('refund', 'Refund')
     )
 
-    bet = models.ForeignKey(GamblingBet, on_delete=models.CASCADE)
+    bet = models.ForeignKey(
+        GamblingBet,
+        on_delete=models.CASCADE,
+        related_name='transactions'
+    )
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
-    amount = models.DecimalField(max_digits=18, decimal_places=8)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
     timestamp = models.DateTimeField(auto_now_add=True)
-    details = models.JSONField(default=dict)
 
-    class Meta:
-        db_table = 'gambling_transactions'
+    def __str__(self):
+        return f"{self.transaction_type} - {self.bet}"
 
 class InvitedGambler(models.Model):
     game = models.ForeignKey(GamblingGame, on_delete=models.CASCADE)
@@ -114,4 +130,17 @@ class InvitedGambler(models.Model):
 
     class Meta:
         db_table = 'invited_gamblers'
-        unique_together = ['game', 'user'] 
+        unique_together = ['game', 'user']
+
+class GamblingSetting(models.Model):
+    key = models.CharField(max_length=50, unique=True)
+    value = models.JSONField()
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.key
+
+    class Meta:
+        ordering = ['key'] 

@@ -19,7 +19,7 @@ class User(AbstractUser):
     address = models.TextField(blank=True, null=True)
     id_number = models.CharField(max_length=50, blank=True, null=True)
     nationality = models.CharField(max_length=100, blank=True, null=True)
-    phone = models.CharField(max_length=20, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True)
     mobile = models.CharField(max_length=20, blank=True, null=True)
     
     # Verification flags
@@ -30,22 +30,33 @@ class User(AbstractUser):
     class Meta:
         db_table = 'users'
 
+class UserIP(models.Model):
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='ip_addresses')
+    ip_address = models.GenericIPAddressField()
+    last_used = models.DateTimeField(auto_now=True)
+    is_first_ip = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ['-last_used']
+        unique_together = ['user', 'ip_address']
+
 class SecurityQuestion(models.Model):
     question_text = models.CharField(max_length=200)
     is_custom = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'security_questions'
+    
+    def __str__(self):
+        return self.question_text
 
 class UserSecurityQuestion(models.Model):
-    user = models.ForeignKey('User', on_delete=models.CASCADE)
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='security_questions')
     question = models.ForeignKey(SecurityQuestion, on_delete=models.CASCADE)
     answer = models.CharField(max_length=200)
+    custom_question = models.CharField(max_length=200, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
     class Meta:
-        db_table = 'user_security_questions'
+        unique_together = ['user', 'question']
 
 class UserMessage(models.Model):
     MESSAGE_TYPES = (
@@ -54,6 +65,7 @@ class UserMessage(models.Model):
         ('security', 'Security Alert'),
         ('group', 'Group Message'),
         ('gambling', 'Gambling Update'),
+        ('notification', 'Notification'),
     )
 
     user = models.ForeignKey('User', on_delete=models.CASCADE)

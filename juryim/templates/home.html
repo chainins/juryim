@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="home-container">
+    {% if user.is_authenticated %}
+        <h2>Welcome, {{ user.username }}!</h2>
+        <div class="dashboard">
+            <div class="section">
+                <h3>Financial</h3>
+                <p>Balance: {{ user.financialaccount.balance }}</p>
+                <p>Total Deposited: {{ user.financialaccount.total_deposited }}</p>
+                <p>Total Withdrawn: {{ user.financialaccount.total_withdrawn }}</p>
+                <div class="button-group">
+                    <a href="{% url 'financial:deposit' %}" class="button">Deposit</a>
+                    <a href="#" class="button">Withdraw</a>
+                </div>
+            </div>
+            <div class="section">
+                <h3>Recent Transactions</h3>
+                {% with transactions=user.financialaccount.transaction_set.all|slice:":5" %}
+                    {% if transactions %}
+                        <ul class="transaction-list">
+                        {% for tx in transactions %}
+                            <li>
+                                <span class="tx-type">{{ tx.get_transaction_type_display }}</span>
+                                <span class="tx-amount">{{ tx.amount }}</span>
+                                <span class="tx-status">{{ tx.get_status_display }}</span>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No recent transactions</p>
+                    {% endif %}
+                {% endwith %}
+                <a href="#" class="button">View All</a>
+            </div>
+            <div class="section">
+                <h3>Deposit Addresses</h3>
+                {% with addresses=user.financialaccount.depositaddress_set.all|slice:":3" %}
+                    {% if addresses %}
+                        <ul class="address-list">
+                        {% for addr in addresses %}
+                            <li>
+                                <span class="network">{{ addr.network }}</span>
+                                <span class="address">{{ addr.address }}</span>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No deposit addresses</p>
+                    {% endif %}
+                {% endwith %}
+                <a href="#" class="button">Generate New</a>
+            </div>
+        </div>
+        <a href="{% url 'logout' %}" class="logout-button">Logout</a>
+    {% else %}
+        <h2>Welcome to Juryim</h2>
+        <p>Please <a href="{% url 'login' %}">login</a> to continue.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+.transaction-list, .address-list {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+}
+
+.transaction-list li, .address-list li {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.tx-type {
+    font-weight: bold;
+}
+
+.tx-amount {
+    float: right;
+}
+
+.tx-status {
+    display: block;
+    font-size: 0.8em;
+    color: #666;
+}
+
+.network {
+    font-weight: bold;
+}
+
+.address {
+    display: block;
+    font-size: 0.8em;
+    word-break: break-all;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+} 

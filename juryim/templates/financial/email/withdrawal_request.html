@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .details { background: #f8f9fa; padding: 20px; border-radius: 5px; }
+        .amount { font-size: 24px; font-weight: bold; color: #007bff; }
+        .button { 
+            display: inline-block; 
+            padding: 10px 20px; 
+            background: #007bff; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 5px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Withdrawal Request Received</h1>
+        </div>
+        
+        <p>Dear {{ user.username }},</p>
+        
+        <p>We have received your withdrawal request. Here are the details:</p>
+        
+        <div class="details">
+            <p>Amount: <span class="amount">{{ withdrawal.amount }} {{ withdrawal.network }}</span></p>
+            <p>Network Fee: {{ withdrawal.fee }} {{ withdrawal.network }}</p>
+            <p>Total: {{ withdrawal.amount|add:withdrawal.fee }} {{ withdrawal.network }}</p>
+            <p>Address: {{ withdrawal.address }}</p>
+            <p>Status: {{ withdrawal.get_status_display }}</p>
+        </div>
+        
+        <p>You can track the status of your withdrawal here:</p>
+        
+        <p style="text-align: center;">
+            <a href="{{ status_url }}" class="button">View Status</a>
+        </p>
+        
+        <p>If you did not initiate this withdrawal, please contact support immediately.</p>
+        
+        <p>Best regards,<br>Your Platform Team</p>
+    </div>
+</body>
+</html> 

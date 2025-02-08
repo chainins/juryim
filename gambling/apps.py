@@ -8,10 +8,10 @@ class GamblingConfig(AppConfig):
 
     def ready(self):
         """Initialize app and register signals"""
-        from . import signals
-        
-        # Register post-migrate handler
-        post_migrate.connect(self.create_default_settings, sender=self)
+        # Import the signal handler here to avoid circular imports
+        from .signals import create_default_settings
+        # Connect the signal handler
+        post_migrate.connect(create_default_settings, sender=self)
     
     def create_default_settings(self, **kwargs):
         """Create default gambling settings after migration"""

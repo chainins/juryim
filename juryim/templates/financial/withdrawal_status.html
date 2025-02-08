@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="withdrawal-status-container">
+    <h2>Withdrawal Status</h2>
+    
+    <div class="status-card">
+        <div class="status-header">
+            <span class="status {{ withdrawal.status }}">{{ withdrawal.get_status_display }}</span>
+            <span class="timestamp">{{ withdrawal.created_at|date:"Y-m-d H:i" }}</span>
+        </div>
+        
+        <div class="amount-details">
+            <div class="amount-row">
+                <span>Amount:</span>
+                <span class="value">{{ withdrawal.amount }} {{ withdrawal.network }}</span>
+            </div>
+            <div class="amount-row">
+                <span>Network Fee:</span>
+                <span class="value">{{ withdrawal.fee }} {{ withdrawal.network }}</span>
+            </div>
+            <div class="amount-row total">
+                <span>Total:</span>
+                <span class="value">{{ withdrawal.amount|add:withdrawal.fee }} {{ withdrawal.network }}</span>
+            </div>
+        </div>
+        
+        <div class="withdrawal-details">
+            <div class="detail-row">
+                <span class="label">Network:</span>
+                <span class="value">{{ withdrawal.get_network_display }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Address:</span>
+                <span class="value address">{{ withdrawal.address }}</span>
+            </div>
+            {% if withdrawal.transaction_hash %}
+            <div class="detail-row">
+                <span class="label">Transaction Hash:</span>
+                <span class="value hash">{{ withdrawal.transaction_hash }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if withdrawal.status == 'failed' and withdrawal.error_message %}
+        <div class="error-message">
+            {{ withdrawal.error_message }}
+        </div>
+        {% endif %}
+        
+        <div class="status-timeline">
+            <div class="timeline-item {% if withdrawal.status != 'failed' %}active{% endif %}">
+                <div class="timeline-point"></div>
+                <div class="timeline-content">
+                    <h4>Request Submitted</h4>
+                    <p>{{ withdrawal.created_at|date:"Y-m-d H:i" }}</p>
+                </div>
+            </div>
+            <div class="timeline-item {% if withdrawal.status == 'processing' or withdrawal.status == 'completed' %}active{% endif %}">
+                <div class="timeline-point"></div>
+                <div class="timeline-content">
+                    <h4>Processing</h4>
+                    {% if withdrawal.processed_at %}
+                    <p>{{ withdrawal.processed_at|date:"Y-m-d H:i" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="timeline-item {% if withdrawal.status == 'completed' %}active{% endif %}">
+                <div class="timeline-point"></div>
+                <div class="timeline-content">
+                    <h4>Completed</h4>
+                    {% if withdrawal.completed_at %}
+                    <p>{{ withdrawal.completed_at|date:"Y-m-d H:i" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="action-buttons">
+        <a href="{% url 'financial:withdrawal' %}" class="button">New Withdrawal</a>
+        <a href="{% url 'financial:dashboard' %}" class="button secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.withdrawal-status-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 20px;
+}
+
+.status-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.status {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.status.pending {
+    background: #ffd700;
+}
+
+.status.processing {
+    background: #87ceeb;
+}
+
+.status.completed {
+    background: #90ee90;
+}
+
+.status.failed {
+    background: #ffcccb;
+}
+
+.amount-details, .withdrawal-details {
+    margin: 20px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.amount-row, .detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+}
+
+.amount-row.total {
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+    font-weight: bold;
+}
+
+.address, .hash {
+    word-break: break-all;
+}
+
+.error-message {
+    margin: 20px 0;
+    padding: 15px;
+    background: #fff3f3;
+    border: 1px solid #ffcccb;
+    border-radius: 4px;
+    color: #dc3545;
+}
+
+.status-timeline {
+    margin: 30px 0;
+    position: relative;
+}
+
+.timeline-item {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.timeline-point {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ddd;
+    margin-right: 15px;
+    position: relative;
+}
+
+.timeline-item.active .timeline-point {
+    background: #007bff;
+}
+
+.timeline-item:not(:last-child) .timeline-point:after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 20px;
+    bottom: -20px;
+    width: 2px;
+    background: #ddd;
+}
+
+.timeline-item.active .timeline-point:after {
+    background: #007bff;
+}
+
+.timeline-content {
+    flex: 1;
+}
+
+.timeline-content h4 {
+    margin: 0;
+    color: #333;
+}
+
+.timeline-content p {
+    margin: 5px 0 0;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.button {
+    padding: 10px 20px;
+    border-radius: 4px;
+    text-decoration: none;
+    text-align: center;
+    flex: 1;
+}
+
+.button:not(.secondary) {
+    background: #007bff;
+    color: white;
+}
+
+.button.secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.button:hover {
+    opacity: 0.9;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// WebSocket connection for real-time updates
+const withdrawalSocket = new WebSocket(
+    'ws://' + window.location.host + 
+    '/ws/financial/withdrawal/' + 
+    '{{ withdrawal.id }}/'
+);
+
+withdrawalSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    if (data.type === 'withdrawal_update') {
+        // Update status and timeline
+        updateWithdrawalStatus(data.data);
+    }
+};
+
+function updateWithdrawalStatus(data) {
+    // Update status badge
+    const statusBadge = document.querySelector('.status');
+    statusBadge.className = `status ${data.status}`;
+    statusBadge.textContent = data.status;
+    
+    // Update timeline
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    timelineItems.forEach(item => {
+        if (data.status === 'processing') {
+            item.classList.add('active');
+        } else if (data.status === 'completed') {
+            item.classList.add('active');
+        }
+    });
+    
+    // If completed or failed, reload page after short delay
+    if (data.status === 'completed' || data.status === 'failed') {
+        setTimeout(() => {
+            location.reload();
+        }, 2000);
+    }
+}
+</script>
+{% endblock %} 

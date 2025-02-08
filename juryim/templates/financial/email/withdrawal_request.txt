@@ -1,0 +1,19 @@
+Withdrawal Request Received
+
+Dear {{ user.username }},
+
+We have received your withdrawal request. Here are the details:
+
+Amount: {{ withdrawal.amount }} {{ withdrawal.network }}
+Network Fee: {{ withdrawal.fee }} {{ withdrawal.network }}
+Total: {{ withdrawal.amount|add:withdrawal.fee }} {{ withdrawal.network }}
+Address: {{ withdrawal.address }}
+Status: {{ withdrawal.get_status_display }}
+
+You can track the status of your withdrawal here:
+{{ status_url }}
+
+If you did not initiate this withdrawal, please contact support immediately.
+
+Best regards,
+Your Platform Team 

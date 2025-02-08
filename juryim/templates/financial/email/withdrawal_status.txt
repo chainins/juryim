@@ -1,0 +1,17 @@
+Withdrawal Status Update
+
+Dear {{ user.username }},
+
+Your withdrawal status has been updated:
+
+Status: {{ withdrawal.get_status_display }}
+Amount: {{ withdrawal.amount }} {{ withdrawal.network }}
+Network Fee: {{ withdrawal.fee }} {{ withdrawal.network }}
+Address: {{ withdrawal.address }}
+{% if withdrawal.transaction_hash %}Transaction Hash: {{ withdrawal.transaction_hash }}{% endif %}
+
+You can view the full details here:
+{{ status_url }}
+
+Best regards,
+Your Platform Team 

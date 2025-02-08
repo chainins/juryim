@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="withdrawal-container">
+    <h2>Withdraw Funds</h2>
+    
+    <div class="balance-info">
+        <h3>Available Balance</h3>
+        <div class="balance-grid">
+            {% for currency, balance in balances.items %}
+            <div class="balance-item">
+                <span class="currency">{{ currency }}</span>
+                <span class="amount">{{ balance }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <form method="post" class="withdrawal-form" id="withdrawalForm">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="network">Network</label>
+            <select name="network" id="network" required>
+                <option value="">Select Network</option>
+                {% for network in networks %}
+                <option value="{{ network.code }}" 
+                        data-fee="{{ network.fee }}" 
+                        data-min="{{ network.min_amount }}">
+                    {{ network.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="amount">Amount</label>
+            <input type="number" name="amount" id="amount" step="0.00000001" required>
+            <span class="min-amount" id="minAmount"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="address">Withdrawal Address</label>
+            <input type="text" name="address" id="address" required>
+        </div>
+
+        <div class="fee-info">
+            <div class="fee-row">
+                <span>Network Fee:</span>
+                <span id="networkFee">-</span>
+            </div>
+            <div class="fee-row">
+                <span>You will receive:</span>
+                <span id="receiveAmount">-</span>
+            </div>
+        </div>
+
+        <button type="submit" class="submit-button">Withdraw</button>
+    </form>
+
+    <div class="withdrawal-history">
+        <h3>Recent Withdrawals</h3>
+        {% if recent_withdrawals %}
+            <ul class="withdrawal-list">
+                {% for withdrawal in recent_withdrawals %}
+                    <li class="withdrawal-item">
+                        <div class="withdrawal-details">
+                            <span class="amount">{{ withdrawal.amount }} {{ withdrawal.network }}</span>
+                            <span class="status {{ withdrawal.status }}">{{ withdrawal.get_status_display }}</span>
+                        </div>
+                        <div class="withdrawal-meta">
+                            <span class="address">{{ withdrawal.address }}</span>
+                            <span class="timestamp">{{ withdrawal.created_at|date:"Y-m-d H:i" }}</span>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No recent withdrawals</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.withdrawal-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 20px;
+}
+
+.balance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.balance-item {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.currency {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.withdrawal-form {
+    margin: 30px 0;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.fee-info {
+    margin: 20px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.fee-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 5px 0;
+}
+
+.submit-button {
+    width: 100%;
+    padding: 10px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.submit-button:hover {
+    background: #0056b3;
+}
+
+.withdrawal-list {
+    list-style: none;
+    padding: 0;
+}
+
+.withdrawal-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.withdrawal-details {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.withdrawal-meta {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.status {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+.status.pending {
+    background: #ffd700;
+}
+
+.status.completed {
+    background: #90ee90;
+}
+
+.status.failed {
+    background: #ffcccb;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('withdrawalForm');
+    const networkSelect = document.getElementById('network');
+    const amountInput = document.getElementById('amount');
+    const minAmountSpan = document.getElementById('minAmount');
+    const networkFeeSpan = document.getElementById('networkFee');
+    const receiveAmountSpan = document.getElementById('receiveAmount');
+
+    function updateFeeInfo() {
+        const selectedOption = networkSelect.selectedOptions[0];
+        const amount = parseFloat(amountInput.value) || 0;
+        
+        if (selectedOption.value) {
+            const fee = parseFloat(selectedOption.dataset.fee);
+            const minAmount = parseFloat(selectedOption.dataset.min);
+            
+            minAmountSpan.textContent = `Minimum: ${minAmount} ${selectedOption.value}`;
+            networkFeeSpan.textContent = `${fee} ${selectedOption.value}`;
+            receiveAmountSpan.textContent = `${(amount - fee).toFixed(8)} ${selectedOption.value}`;
+        } else {
+            minAmountSpan.textContent = '';
+            networkFeeSpan.textContent = '-';
+            receiveAmountSpan.textContent = '-';
+        }
+    }
+
+    networkSelect.addEventListener('change', updateFeeInfo);
+    amountInput.addEventListener('input', updateFeeInfo);
+});
+</script>
+{% endblock %} 

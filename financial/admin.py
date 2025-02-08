@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from .models import (
     FinancialAccount, Transaction, WithdrawalRequest,
-    DepositAddress, PaymentProvider
+    DepositAddress, PaymentProvider, DepositRequest
 )
 from .services import FinancialService
 
@@ -22,93 +22,120 @@ class FinancialAccountAdmin(admin.ModelAdmin):
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = [
-        'id', 'account_link', 'transaction_type',
-        'amount', 'fee', 'status', 'created_at'
-    ]
+    list_display = ['get_user', 'transaction_type', 'amount', 'status', 'created_at']
     list_filter = ['transaction_type', 'status', 'created_at']
-    search_fields = [
-        'account__user__username',
-        'account__user__email',
-        'reference_id'
-    ]
-    readonly_fields = ['created_at', 'updated_at']
-    
-    def account_link(self, obj):
-        url = reverse('admin:financial_financialaccount_change', args=[obj.account.id])
-        return format_html('<a href="{}">{}</a>', url, obj.account.user.username)
-    account_link.short_description = 'Account'
+    search_fields = ['user__username', 'transaction_hash']
+    fields = ['user', 'transaction_type', 'amount', 'transaction_hash', 'status', 'created_at']
+
+    def get_user(self, obj):
+        return obj.user.username
+    get_user.short_description = 'User'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 @admin.register(WithdrawalRequest)
 class WithdrawalRequestAdmin(admin.ModelAdmin):
-    list_display = [
-        'id', 'account_link', 'amount', 'fee',
-        'network', 'status', 'created_at'
-    ]
-    list_filter = ['status', 'network', 'created_at']
-    search_fields = [
-        'account__user__username',
-        'account__user__email',
-        'address',
-        'transaction_hash'
-    ]
-    readonly_fields = ['created_at', 'updated_at']
-    actions = ['approve_withdrawals', 'reject_withdrawals']
-    
-    def account_link(self, obj):
-        url = reverse('admin:financial_financialaccount_change', args=[obj.account.id])
-        return format_html('<a href="{}">{}</a>', url, obj.account.user.username)
-    account_link.short_description = 'Account'
-    
-    def approve_withdrawals(self, request, queryset):
-        for withdrawal in queryset.filter(status='pending'):
-            try:
-                withdrawal.status = 'processing'
-                withdrawal.save()
-                # Add admin note
-                withdrawal.admin_notes += f'\nApproved by {request.user} at {timezone.now()}'
-                withdrawal.save()
-            except Exception as e:
-                self.message_user(request, f'Error approving withdrawal {withdrawal.id}: {str(e)}')
-    approve_withdrawals.short_description = 'Approve selected withdrawals'
-    
-    def reject_withdrawals(self, request, queryset):
-        for withdrawal in queryset.filter(status='pending'):
-            try:
-                withdrawal.status = 'cancelled'
-                withdrawal.save()
-                # Add admin note
-                withdrawal.admin_notes += f'\nRejected by {request.user} at {timezone.now()}'
-                withdrawal.save()
-                # Refund the amount
-                FinancialService.create_transaction(
-                    account=withdrawal.account,
-                    transaction_type='refund',
-                    amount=withdrawal.amount + withdrawal.fee,
-                    description=f'Refund for rejected withdrawal #{withdrawal.id}'
-                )
-            except Exception as e:
-                self.message_user(request, f'Error rejecting withdrawal {withdrawal.id}: {str(e)}')
-    reject_withdrawals.short_description = 'Reject selected withdrawals'
+    list_display = ['get_user', 'amount', 'get_wallet_address', 'status', 'created_at', 'get_processed_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['user__username', 'wallet_address']
+    fields = ['user', 'amount', 'wallet_address', 'transaction_hash', 'status', 'created_at', 'processed_at']
+
+    def get_user(self, obj):
+        return obj.user.username
+    get_user.short_description = 'User'
+
+    def get_wallet_address(self, obj):
+        return obj.wallet_address
+    get_wallet_address.short_description = 'Wallet Address'
+
+    def get_processed_at(self, obj):
+        return obj.processed_at
+    get_processed_at.short_description = 'Processed At'
+
+    def has_add_permission(self, request):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        if 'status' in form.changed_data and obj.status == 'approved':
+            obj.process_withdrawal()
+        super().save_model(request, obj, form, change)
+
+@admin.register(DepositRequest)
+class DepositRequestAdmin(admin.ModelAdmin):
+    list_display = ['get_user', 'amount', 'status', 'created_at', 'get_processed_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['user__username', 'transaction_hash']
+    fields = ['user', 'amount', 'transaction_hash', 'status', 'created_at', 'processed_at']
+
+    def get_user(self, obj):
+        return obj.user.username
+    get_user.short_description = 'User'
+
+    def get_processed_at(self, obj):
+        return obj.processed_at
+    get_processed_at.short_description = 'Processed At'
+
+    def has_add_permission(self, request):
+        return False
 
 @admin.register(DepositAddress)
 class DepositAddressAdmin(admin.ModelAdmin):
     list_display = [
-        'address', 'account_link', 'network',
-        'is_active', 'created_at', 'last_used'
+        'id', 'account_link', 'network', 'address', 'created_at'
     ]
-    list_filter = ['network', 'is_active', 'created_at']
+    list_filter = ['network', 'created_at']
     search_fields = [
         'account__user__username',
-        'account__user__email',
         'address'
     ]
-    readonly_fields = ['created_at']
+    readonly_fields = [
+        'account',
+        'network',
+        'address',
+        'created_at'
+    ]
     
     def account_link(self, obj):
-        url = reverse('admin:financial_financialaccount_change', args=[obj.account.id])
+        url = reverse('admin:users_user_change', args=[obj.account.user.id])
         return format_html('<a href="{}">{}</a>', url, obj.account.user.username)
     account_link.short_description = 'Account'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    actions = ['generate_new_address']
+
+    @admin.action(description='Generate new address for selected accounts')
+    def generate_new_address(self, request, queryset):
+        from .services import DepositService
+        service = DepositService()
+        
+        success = 0
+        for deposit_address in queryset:
+            try:
+                service.create_deposit_address(
+                    deposit_address.account.user,
+                    deposit_address.network
+                )
+                success += 1
+            except Exception as e:
+                self.message_user(
+                    request,
+                    f"Error generating address for {deposit_address.account.user}: {str(e)}",
+                    level='ERROR'
+                )
+        
+        self.message_user(
+            request,
+            f"Successfully generated {success} new addresses"
+        )
 
 @admin.register(PaymentProvider)
 class PaymentProviderAdmin(admin.ModelAdmin):

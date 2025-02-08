@@ -45,9 +45,8 @@ class Transaction(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
-    class Meta:
-        db_table = 'financial_transactions'
-        ordering = ['-created_at']
+    def __str__(self):
+        return f"{self.account.user.username} - {self.transaction_type} - {self.amount}"
 
 class WithdrawalRequest(models.Model):
     STATUS_CHOICES = (
@@ -70,9 +69,14 @@ class WithdrawalRequest(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
-    class Meta:
-        db_table = 'withdrawal_requests'
-        ordering = ['-created_at']
+    def __str__(self):
+        return f"{self.account.user.username} - {self.amount} - {self.status}"
+    
+    def process_withdrawal(self):
+        if self.status == 'approved' and not self.completed_at:
+            # Add withdrawal processing logic here
+            self.completed_at = timezone.now()
+            self.save()
 
 class DepositAddress(models.Model):
     account = models.ForeignKey(FinancialAccount, on_delete=models.CASCADE)
@@ -99,4 +103,27 @@ class PaymentProvider(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'payment_providers' 
+        db_table = 'payment_providers'
+
+class DepositRequest(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=18, decimal_places=8)
+    transaction_hash = models.CharField(max_length=100, blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.amount} - {self.status}"
+    
+    def process_deposit(self):
+        if self.status == 'approved' and not self.processed_at:
+            # Add deposit processing logic here
+            self.processed_at = timezone.now()
+            self.save() 

@@ -2,11 +2,12 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 from decimal import Decimal
-from .models import GamblingGame, GamblingBet, GamblingTransaction
+from .models import GamblingGame, GamblingBet, GamblingTransaction, GamblingSetting
 from financial.services import FinancialService
 from .services import GamblingService
 from .notifications import GamblingNotifier
 import logging
+from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
@@ -123,4 +124,23 @@ def handle_game_timing(sender, instance, created, **kwargs):
             try:
                 GamblingNotifier.notify_game_ending_soon(instance)
             except Exception as e:
-                logger.error(f"Error sending game ending soon notification: {str(e)}") 
+                logger.error(f"Error sending game ending soon notification: {str(e)}")
+
+def create_default_settings(sender, **kwargs):
+    try:
+        with transaction.atomic():
+            # Default game settings
+            GamblingSetting.objects.get_or_create(
+                key='default_game_settings',
+                defaults={
+                    'value': {
+                        'min_bet': 1.00,
+                        'max_bet': 1000.00,
+                        'fee_percentage': 2.00
+                    },
+                    'description': 'Default settings for gambling games'
+                }
+            )
+    except Exception as e:
+        # Log the error but don't crash
+        print(f"Error creating default settings: {e}") 

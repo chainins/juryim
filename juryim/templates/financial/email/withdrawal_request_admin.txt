@@ -1,0 +1,19 @@
+New Withdrawal Request
+
+User Information:
+Username: {{ user.username }}
+Email: {{ user.email }}
+Account Balance: {{ user.financialaccount.balance }}
+Registration Date: {{ user.date_joined|date }}
+
+Withdrawal Details:
+Amount: {{ withdrawal.amount }} {{ withdrawal.network }}
+Network Fee: {{ withdrawal.fee }} {{ withdrawal.network }}
+Total: {{ withdrawal.amount|add:withdrawal.fee }} {{ withdrawal.network }}
+Address: {{ withdrawal.address }}
+Status: {{ withdrawal.get_status_display }}
+Request Time: {{ withdrawal.created_at|date:"Y-m-d H:i:s" }}
+
+View in Admin Panel: {{ status_url }}
+
+This is an automated message from your platform's financial system. 
