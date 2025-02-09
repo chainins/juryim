@@ -5,7 +5,7 @@ from django.views.decorators.http import require_http_methods
 from django.core.exceptions import PermissionDenied
 from .forms import UserRegistrationForm, SecurityQuestionForm, SecurityQuestionVerificationForm
 from .services import UserAuthService
-from .models import User, SecurityQuestion, UserSecurityQuestion, UserIP, UserMessage
+from .models import User, SecurityQuestion, UserSecurityQuestion, UserIP, UserMessage, Message
 from social_django.utils import load_strategy, load_backend
 from social_core.actions import do_complete
 from django.contrib import messages
@@ -67,6 +67,26 @@ class UserViews:
             'questions': questions
         })
 
+    @staticmethod
+    def verify_email(request, token):
+        return render(request, 'users/verify_email.html')
+
+    @staticmethod
+    def login(request):
+        return render(request, 'users/login.html')
+
+    @staticmethod
+    def logout(request):
+        return redirect('login')
+
+    @staticmethod
+    def settings(request):
+        return render(request, 'users/settings.html')
+
+    @staticmethod
+    def password_reset(request):
+        return render(request, 'users/password_reset.html')
+
 def require_email(request):
     """Handle email collection for social auth"""
     strategy = load_strategy()
@@ -88,28 +108,13 @@ def require_email(request):
 
 @login_required
 def security_questions(request):
-    """Manage security questions"""
-    user_questions = UserSecurityQuestion.objects.filter(user=request.user)
-    
-    if request.method == 'POST':
-        form = SecurityQuestionForm(request.POST)
-        if form.is_valid():
-            if user_questions.count() >= 5:
-                messages.error(request, 'You can only have up to 5 security questions.')
-                return redirect('security_questions')
-                
-            question = form.save(commit=False)
-            question.user = request.user
-            question.save()
-            messages.success(request, 'Security question added successfully.')
-            return redirect('security_questions')
-    else:
-        form = SecurityQuestionForm()
-    
-    return render(request, 'users/security_questions.html', {
-        'form': form,
-        'user_questions': user_questions
-    })
+    questions = SecurityQuestion.objects.filter(user=request.user)
+    return render(request, 'users/security_questions.html', {'questions': questions})
+
+@login_required
+def messages_view(request):
+    user_messages = Message.objects.filter(recipient=request.user).order_by('-created_at')
+    return render(request, 'users/messages.html', {'messages': user_messages})
 
 @login_required
 def delete_security_question(request, question_id):

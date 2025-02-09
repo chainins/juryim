@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Security Questions</h2>
+    
+    {% if questions %}
+        <div class="list-group">
+            {% for question in questions %}
+            <div class="list-group-item">
+                <h5 class="mb-1">{{ question.question }}</h5>
+                <p class="mb-1">Answer: ******* (hidden for security)</p>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No security questions set up yet. Please set up your security questions to protect your account.
+        </div>
+    {% endif %}
+    
+    <div class="mt-3">
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addQuestionModal">
+            Add New Security Question
+        </button>
+    </div>
+</div>
+{% endblock %} 

@@ -1,5 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.conf import settings
+from django.contrib.auth import get_user_model
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -41,12 +43,18 @@ class UserIP(models.Model):
         unique_together = ['user', 'ip_address']
 
 class SecurityQuestion(models.Model):
-    question_text = models.CharField(max_length=200)
-    is_custom = models.BooleanField(default=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE,
+        null=True,  # Allow null temporarily for migration
+        default=1   # Default to user ID 1 (usually admin)
+    )
+    question = models.CharField(max_length=255, default="What is your mother's maiden name?")
+    answer = models.CharField(max_length=255, default="Not set")
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     def __str__(self):
-        return self.question_text
+        return f"{self.user.username}'s security question"
 
 class UserSecurityQuestion(models.Model):
     user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='security_questions')
@@ -76,4 +84,15 @@ class UserMessage(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'user_messages' 
+        db_table = 'user_messages'
+
+class Message(models.Model):
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='sent_messages', on_delete=models.CASCADE)
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='received_messages', on_delete=models.CASCADE)
+    subject = models.CharField(max_length=255)
+    content = models.TextField()
+    read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Message from {self.sender} to {self.recipient}: {self.subject}" 
