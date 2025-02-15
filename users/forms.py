@@ -51,6 +51,12 @@ class UserRegistrationForm(forms.ModelForm):
             }),
         }
 
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError('Username already exists')
+        return username
+
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if User.objects.filter(email=email).exists():
@@ -74,7 +80,6 @@ class UserRegistrationForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data["email"]
-        user.password = make_password(self.cleaned_data["password"])
         if commit:
             user.save()
         return user
@@ -101,13 +106,19 @@ class SecurityQuestionVerificationForm(forms.Form):
 
 class SecurityAnswerForm(forms.Form):
     security_answer = forms.CharField(
-        label='What is your favorite color?',
         max_length=200,
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Enter your answer here',
+            'placeholder': 'Enter your answer',
             'id': 'id_security_answer',
-            'name': 'security_answer'
+            'name': 'security_answer',
+            'autocomplete': 'off'
         })
-    ) 
+    )
+
+    def clean_security_answer(self):
+        answer = self.cleaned_data.get('security_answer')
+        if not answer:
+            raise forms.ValidationError("Security answer is required.")
+        return answer.strip() 
