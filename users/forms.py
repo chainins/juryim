@@ -1,14 +1,55 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from .models import User, SecurityQuestion, UserSecurityQuestion
+from django.contrib.auth.hashers import make_password
 
-class UserRegistrationForm(UserCreationForm):
-    invitation_code = forms.CharField(max_length=30, required=True)
-    email = forms.EmailField(required=True)
+class UserRegistrationForm(forms.ModelForm):
+    invitation_code = forms.CharField(
+        max_length=30, 
+        required=True,
+        initial='WELCOME2024',  # Default invitation code
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter invitation code'
+        })
+    )
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter email'
+        })
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter password'
+        })
+    )
+    confirm_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirm password'
+        })
+    )
+    security_answer = forms.CharField(
+        label="What is your favorite color?",
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your favorite color'
+        })
+    )
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password1', 'password2', 'invitation_code')
+        fields = ('username', 'email', 'password', 'confirm_password', 'invitation_code', 'security_answer')
+        widgets = {
+            'username': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter username'
+            }),
+        }
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
@@ -18,8 +59,25 @@ class UserRegistrationForm(UserCreationForm):
 
     def clean_invitation_code(self):
         code = self.cleaned_data.get('invitation_code')
-        # Add invitation code validation logic here
+        valid_codes = ['WELCOME2024', 'VIP2024']  # Add more valid codes as needed
+        if code not in valid_codes:
+            raise forms.ValidationError("Invalid invitation code")
         return code
+
+    def clean_confirm_password(self):
+        password = self.cleaned_data.get('password')
+        confirm_password = self.cleaned_data.get('confirm_password')
+        if password and confirm_password and password != confirm_password:
+            raise forms.ValidationError("Passwords don't match")
+        return confirm_password
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data["email"]
+        user.password = make_password(self.cleaned_data["password"])
+        if commit:
+            user.save()
+        return user
 
 class SecurityQuestionForm(forms.ModelForm):
     answer = forms.CharField(widget=forms.PasswordInput)
@@ -40,3 +98,16 @@ class SecurityQuestionVerificationForm(forms.Form):
     def __init__(self, question, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['answer'].label = question 
+
+class SecurityAnswerForm(forms.Form):
+    security_answer = forms.CharField(
+        label='What is your favorite color?',
+        max_length=200,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your answer here',
+            'id': 'id_security_answer',
+            'name': 'security_answer'
+        })
+    ) 

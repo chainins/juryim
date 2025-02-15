@@ -173,12 +173,19 @@ class UserViews:
     def verify_ip(request):
         print("Verify IP view called")
         if request.method == 'POST':
-            print("POST data:", request.POST)
+            print("POST data:", request.POST)  # Debug print
             form = SecurityAnswerForm(request.POST)
+            print("Form bound:", form.is_bound)  # Debug print
+            print("Form data:", form.data)  # Debug print
+            
             if form.is_valid():
-                user_answer = form.cleaned_data['security_answer']  # Make sure this matches the form field
+                user_answer = form.cleaned_data['security_answer']
+                print(f"Valid form, answer: {user_answer}")  # Debug print
+                
                 try:
                     security_question = SecurityQuestion.objects.get(user=request.user)
+                    print(f"Stored answer: {security_question.answer}")  # Debug print
+                    
                     if security_question.answer.lower() == user_answer.lower():
                         UserIPAddress.objects.get_or_create(
                             user=request.user,
@@ -189,16 +196,21 @@ class UserViews:
                     else:
                         messages.error(request, 'Incorrect answer. Please try again.')
                 except SecurityQuestion.DoesNotExist:
+                    print("Security question not found for user:", request.user)  # Debug print
                     messages.error(request, 'Security question not found.')
             else:
-                print("Form errors:", form.errors)
+                print("Form errors:", form.errors)  # Debug print
                 for field, errors in form.errors.items():
                     for error in errors:
                         messages.error(request, f"{field}: {error}")
         else:
             form = SecurityAnswerForm()
+            print("New form created")  # Debug print
         
-        return render(request, 'users/verify_ip.html', {'form': form})
+        return render(request, 'users/verify_ip.html', {
+            'form': form,
+            'debug': True  # Add debug flag for template
+        })
 
 def require_email(request):
     """Handle email collection for social auth"""
