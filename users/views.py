@@ -15,52 +15,45 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 class UserViews:
     @staticmethod
     @require_http_methods(["GET", "POST"])
     def register(request):
-        print("Register view called")
         if request.method == 'POST':
-            print("POST data:", request.POST)
             form = UserRegistrationForm(request.POST)
-            print("Form created with POST data")
-            
             if form.is_valid():
-                print("Form is valid")
-                user = form.save(commit=False)
-                print(f"User object created: {user.username}")
-                # Hash the password before saving
-                user.set_password(form.cleaned_data['password'])
-                user.is_active = True
-                user.email_verification_token = str(uuid.uuid4())
-                
                 try:
-                    # Save the user
+                    user = form.save(commit=False)
+                    user.is_active = True
+                    user.email_verification_token = str(uuid.uuid4())
+                    # Make sure to set the password correctly
+                    raw_password = form.cleaned_data.get('password')
+                    user.set_password(raw_password)
                     user.save()
-                    print(f"User saved to database: {user.id}")
                     
-                    # Create security question with user's answer
-                    security_question = SecurityQuestion.objects.create(
+                    # Create security question without is_custom field
+                    security_answer = form.cleaned_data.get('security_answer')
+                    SecurityQuestion.objects.create(
                         user=user,
                         question="What is your favorite color?",
-                        answer=form.cleaned_data['security_answer']  # Use the user's answer
+                        answer=security_answer
                     )
-                    print(f"Created security question: {security_question.question}")
                     
                     messages.success(request, 'Registration successful! Please login with your credentials.')
                     return redirect('users:login')
                 except Exception as e:
-                    print(f"Error during registration: {str(e)}")
-                    messages.error(request, 'An error occurred during registration.')
+                    logger.error(f"Registration error: {str(e)}", exc_info=True)
+                    messages.error(request, f'Registration error: {str(e)}')
             else:
-                print("Form errors:", form.errors)
                 for field, errors in form.errors.items():
                     for error in errors:
                         messages.error(request, f"{field}: {error}")
         else:
             form = UserRegistrationForm()
-            print("GET request - empty form created")
         
         return render(request, 'users/register.html', {'form': form})
 
@@ -103,51 +96,19 @@ class UserViews:
 
     @staticmethod
     def login(request):
-        print("Login view called")
-        
         if request.method == 'POST':
             username = request.POST.get('username')
             password = request.POST.get('password')
-            
-            print(f"Attempting to authenticate user: {username}")
             user = authenticate(request, username=username, password=password)
             
             if user is not None:
-                if not user.is_active:
-                    print(f"User {username} is not active")  # Debug print
-                    messages.error(request, 'Please verify your email before logging in.')
-                    return render(request, 'users/login.html')
-                    
-                print(f"User authenticated successfully: {user.username}")
-                current_ip = request.META.get('REMOTE_ADDR')
-                
-                try:
-                    known_ip = UserIPAddress.objects.filter(user=user, ip_address=current_ip).exists()
-                    
-                    if known_ip:
-                        auth_login(request, user)
-                        print("User logged in successfully")
-                        messages.success(request, 'Login successful!')
-                        return redirect('home')
-                    else:
-                        request.session['pending_user_id'] = user.id
-                        request.session['pending_ip'] = current_ip
-                        return redirect('users:verify_ip')
-                except Exception as e:
-                    print(f"Error during login process: {str(e)}")
-                    messages.error(request, 'An error occurred during login.')
+                auth_login(request, user)
+                # Get the next URL from the query parameters, default to home
+                next_url = request.GET.get('next', 'home')
+                messages.success(request, f'Welcome back, {username}!')
+                return redirect(next_url)
             else:
-                # Let's check if the user exists but password is wrong
-                from django.contrib.auth import get_user_model
-                User = get_user_model()
-                try:
-                    user = User.objects.get(username=username)
-                    if not user.is_active:
-                        messages.error(request, 'Please verify your email before logging in.')
-                    else:
-                        messages.error(request, 'Invalid password')
-                except User.DoesNotExist:
-                    messages.error(request, 'Username does not exist')
+                messages.error(request, 'Invalid username or password.')
         
         return render(request, 'users/login.html')
 
@@ -170,22 +131,19 @@ class UserViews:
         return render(request, 'users/password_reset.html')
 
     @staticmethod
+    @login_required
     def verify_ip(request):
-        print("Verify IP view called")
-        if request.method == 'POST':
-            print("POST data:", request.POST)  # Debug print
-            form = SecurityAnswerForm(request.POST)
-            print("Form bound:", form.is_bound)  # Debug print
-            print("Form data:", form.data)  # Debug print
+        if not request.user.is_authenticated:
+            messages.error(request, 'Please login first.')
+            return redirect('users:login')
             
-            if form.is_valid():
-                user_answer = form.cleaned_data['security_answer']
-                print(f"Valid form, answer: {user_answer}")  # Debug print
-                
-                try:
-                    security_question = SecurityQuestion.objects.get(user=request.user)
-                    print(f"Stored answer: {security_question.answer}")  # Debug print
-                    
+        try:
+            security_question = SecurityQuestion.objects.get(user=request.user)
+            
+            if request.method == 'POST':
+                form = SecurityAnswerForm(request.POST)
+                if form.is_valid():
+                    user_answer = form.cleaned_data['security_answer']
                     if security_question.answer.lower() == user_answer.lower():
                         UserIPAddress.objects.get_or_create(
                             user=request.user,
@@ -195,22 +153,17 @@ class UserViews:
                         return redirect('home')
                     else:
                         messages.error(request, 'Incorrect answer. Please try again.')
-                except SecurityQuestion.DoesNotExist:
-                    print("Security question not found for user:", request.user)  # Debug print
-                    messages.error(request, 'Security question not found.')
             else:
-                print("Form errors:", form.errors)  # Debug print
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"{field}: {error}")
-        else:
-            form = SecurityAnswerForm()
-            print("New form created")  # Debug print
-        
-        return render(request, 'users/verify_ip.html', {
-            'form': form,
-            'debug': True  # Add debug flag for template
-        })
+                form = SecurityAnswerForm()
+            
+            return render(request, 'users/verify_ip.html', {
+                'form': form,
+                'security_question': security_question.question
+            })
+            
+        except SecurityQuestion.DoesNotExist:
+            messages.error(request, 'Security question not found. Please contact support.')
+            return redirect('home')
 
 def require_email(request):
     """Handle email collection for social auth"""
