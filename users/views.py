@@ -171,20 +171,15 @@ class UserViews:
 
     @staticmethod
     def verify_ip(request):
-        print("Verify IP view called")  # Debug print
+        print("Verify IP view called")
         if request.method == 'POST':
-            print("POST request received")  # Debug print
-            print("POST data:", request.POST)  # Debug print
+            print("POST data:", request.POST)
             form = SecurityAnswerForm(request.POST)
             if form.is_valid():
-                print("Form is valid")  # Debug print
-                user_answer = form.cleaned_data['security_answer']
+                user_answer = form.cleaned_data['security_answer']  # Make sure this matches the form field
                 try:
                     security_question = SecurityQuestion.objects.get(user=request.user)
-                    print(f"User answer: {user_answer}")  # Debug print
-                    print(f"Stored answer: {security_question.answer}")  # Debug print
                     if security_question.answer.lower() == user_answer.lower():
-                        # Add the current IP to trusted IPs
                         UserIPAddress.objects.get_or_create(
                             user=request.user,
                             ip_address=request.META.get('REMOTE_ADDR')
@@ -194,10 +189,9 @@ class UserViews:
                     else:
                         messages.error(request, 'Incorrect answer. Please try again.')
                 except SecurityQuestion.DoesNotExist:
-                    print("Security question not found")  # Debug print
                     messages.error(request, 'Security question not found.')
             else:
-                print("Form errors:", form.errors)  # Debug print
+                print("Form errors:", form.errors)
                 for field, errors in form.errors.items():
                     for error in errors:
                         messages.error(request, f"{field}: {error}")
