@@ -1,5 +1,8 @@
 from django.utils import timezone
-from .models import UserIP
+from .models import UserIPAddress
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.urls import resolve
 
 class IPTrackingMiddleware:
     def __init__(self, get_response):
@@ -7,23 +10,32 @@ class IPTrackingMiddleware:
 
     def __call__(self, request):
         if request.user.is_authenticated:
-            # Get IP address
-            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-            if x_forwarded_for:
-                ip = x_forwarded_for.split(',')[0]
-            else:
-                ip = request.META.get('REMOTE_ADDR')
-            
-            # Update or create IP record
-            user_ip, created = UserIP.objects.get_or_create(
-                user=request.user,
-                ip_address=ip,
-                defaults={'is_first_ip': not UserIP.objects.filter(user=request.user).exists()}
-            )
-            
-            if not created:
-                user_ip.last_used = timezone.now()
-                user_ip.save()
+            # Skip IP verification for static files, admin, and certain paths
+            if any([
+                request.path.startswith('/static/'),
+                request.path.startswith('/admin/'),
+                request.path.startswith('/users/logout/'),
+                request.path == '/users/verify-ip/',
+                'login' in request.path,
+            ]):
+                return self.get_response(request)
 
-        response = self.get_response(request)
-        return response 
+            current_ip = request.META.get('REMOTE_ADDR')
+            try:
+                # Check if this IP is already verified for this user
+                UserIPAddress.objects.get(user=request.user, ip_address=current_ip)
+                return self.get_response(request)
+            except UserIPAddress.DoesNotExist:
+                if not request.path.endswith('/verify-ip/'):
+                    messages.warning(request, 'Please verify your identity for this new IP address.')
+                    return redirect('users:verify_ip')
+
+        return self.get_response(request)
+
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip 
