@@ -1,37 +1,67 @@
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, authenticate, login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_http_methods
 from django.core.exceptions import PermissionDenied
-from .forms import UserRegistrationForm, SecurityQuestionForm, SecurityQuestionVerificationForm
+from .forms import UserRegistrationForm, SecurityQuestionForm, SecurityQuestionVerificationForm, SecurityAnswerForm
 from .services import UserAuthService
-from .models import User, SecurityQuestion, UserSecurityQuestion, UserIP, UserMessage, Message
+from .models import User, SecurityQuestion, UserSecurityQuestion, UserIP, UserMessage, Message, EmailVerification, UserIPAddress
 from social_django.utils import load_strategy, load_backend
 from social_core.actions import do_complete
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.contrib.auth import login as do_login
+from django.core.mail import send_mail
+from django.conf import settings
+from django.utils import timezone
+import uuid
 
 class UserViews:
     @staticmethod
     @require_http_methods(["GET", "POST"])
     def register(request):
+        print("Register view called")
         if request.method == 'POST':
+            print("POST data:", request.POST)
             form = UserRegistrationForm(request.POST)
+            print("Form created with POST data")
+            
             if form.is_valid():
+                print("Form is valid")
                 user = form.save(commit=False)
-                user.ip_address = request.META.get('REMOTE_ADDR')
-                user.role = 'registered'
-                user.save()
+                print(f"User object created: {user.username}")
+                # Hash the password before saving
+                user.set_password(form.cleaned_data['password'])
+                user.is_active = True
+                user.email_verification_token = str(uuid.uuid4())
                 
-                # Generate new invitation code for the user
-                user.invitation_code = UserAuthService.generate_invitation_code()
-                user.save()
-                
-                login(request, user)
-                return redirect('profile')
+                try:
+                    # Save the user
+                    user.save()
+                    print(f"User saved to database: {user.id}")
+                    
+                    # Create security question with user's answer
+                    security_question = SecurityQuestion.objects.create(
+                        user=user,
+                        question="What is your favorite color?",
+                        answer=form.cleaned_data['security_answer']  # Use the user's answer
+                    )
+                    print(f"Created security question: {security_question.question}")
+                    
+                    messages.success(request, 'Registration successful! Please login with your credentials.')
+                    return redirect('users:login')
+                except Exception as e:
+                    print(f"Error during registration: {str(e)}")
+                    messages.error(request, 'An error occurred during registration.')
+            else:
+                print("Form errors:", form.errors)
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"{field}: {error}")
         else:
             form = UserRegistrationForm()
+            print("GET request - empty form created")
+        
         return render(request, 'users/register.html', {'form': form})
 
     @staticmethod
@@ -73,11 +103,63 @@ class UserViews:
 
     @staticmethod
     def login(request):
+        print("Login view called")
+        
+        if request.method == 'POST':
+            username = request.POST.get('username')
+            password = request.POST.get('password')
+            
+            print(f"Attempting to authenticate user: {username}")
+            user = authenticate(request, username=username, password=password)
+            
+            if user is not None:
+                if not user.is_active:
+                    print(f"User {username} is not active")  # Debug print
+                    messages.error(request, 'Please verify your email before logging in.')
+                    return render(request, 'users/login.html')
+                    
+                print(f"User authenticated successfully: {user.username}")
+                current_ip = request.META.get('REMOTE_ADDR')
+                
+                try:
+                    known_ip = UserIPAddress.objects.filter(user=user, ip_address=current_ip).exists()
+                    
+                    if known_ip:
+                        auth_login(request, user)
+                        print("User logged in successfully")
+                        messages.success(request, 'Login successful!')
+                        return redirect('home')
+                    else:
+                        request.session['pending_user_id'] = user.id
+                        request.session['pending_ip'] = current_ip
+                        return redirect('users:verify_ip')
+                except Exception as e:
+                    print(f"Error during login process: {str(e)}")
+                    messages.error(request, 'An error occurred during login.')
+            else:
+                # Let's check if the user exists but password is wrong
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                try:
+                    user = User.objects.get(username=username)
+                    if not user.is_active:
+                        messages.error(request, 'Please verify your email before logging in.')
+                    else:
+                        messages.error(request, 'Invalid password')
+                except User.DoesNotExist:
+                    messages.error(request, 'Username does not exist')
+        
         return render(request, 'users/login.html')
 
     @staticmethod
     def logout(request):
-        return redirect('login')
+        from django.contrib.auth import logout as auth_logout
+        is_admin = request.user.is_staff  # Store the status before logout
+        auth_logout(request)
+        messages.success(request, 'You have been logged out successfully')
+        if is_admin:
+            return redirect('/admin/login/')  # Use absolute URL for admin login
+        return redirect('users:login')
 
     @staticmethod
     def settings(request):
@@ -86,6 +168,31 @@ class UserViews:
     @staticmethod
     def password_reset(request):
         return render(request, 'users/password_reset.html')
+
+    @staticmethod
+    def verify_ip(request):
+        if request.method == 'POST':
+            form = SecurityAnswerForm(request.POST)
+            if form.is_valid():
+                user_answer = form.cleaned_data['security_answer']
+                try:
+                    security_question = SecurityQuestion.objects.get(user=request.user)
+                    if security_question.answer.lower() == user_answer.lower():
+                        # Add the current IP to trusted IPs
+                        UserIPAddress.objects.get_or_create(
+                            user=request.user,
+                            ip_address=request.META.get('REMOTE_ADDR')
+                        )
+                        messages.success(request, 'IP verification successful!')
+                        return redirect('home')
+                    else:
+                        messages.error(request, 'Incorrect answer. Please try again.')
+                except SecurityQuestion.DoesNotExist:
+                    messages.error(request, 'Security question not found.')
+        else:
+            form = SecurityAnswerForm()
+        
+        return render(request, 'users/verify_ip.html', {'form': form})
 
 def require_email(request):
     """Handle email collection for social auth"""
@@ -128,37 +235,41 @@ def delete_security_question(request, question_id):
     
     return redirect('security_questions')
 
-def verify_ip_change(request):
-    """Verify user when IP changes"""
-    if not request.session.get('needs_verification'):
-        return redirect('home')
+def verify_ip(request):
+    print("\n=== Starting verify_ip view ===")
+    pending_user_id = request.session.get('pending_user_id')
+    pending_ip = request.session.get('pending_ip')
+    
+    if not pending_user_id or not pending_ip:
+        messages.error(request, 'No pending verification found')
+        return redirect('users:login')
+    
+    try:
+        user = User.objects.get(id=pending_user_id)
+        security_question = SecurityQuestion.objects.filter(user=user).first()
         
-    user = request.user
-    question = UserSecurityQuestion.objects.filter(user=user).first()
-    
-    if not question:
-        # If no security questions, just verify and continue
-        del request.session['needs_verification']
-        return redirect('home')
-    
-    if request.method == 'POST':
-        form = SecurityQuestionVerificationForm(question.question_text, request.POST)
-        if form.is_valid():
-            if form.cleaned_data['answer'] == question.answer:
-                # Update IP record
-                UserIP.objects.create(
-                    user=user,
-                    ip_address=request.META.get('REMOTE_ADDR'),
-                )
-                del request.session['needs_verification']
-                messages.success(request, 'Identity verified successfully.')
+        if request.method == 'POST':
+            answer = request.POST.get('security_answer')
+            print(f"Received answer: {answer}")
+            
+            if security_question and security_question.verify_answer(answer):
+                print("Answer verified successfully")
+                UserIPAddress.objects.create(user=user, ip_address=pending_ip)
+                auth_login(request, user)
+                del request.session['pending_user_id']
+                del request.session['pending_ip']
+                messages.success(request, 'IP verified successfully')
                 return redirect('home')
             else:
-                messages.error(request, 'Incorrect answer.')
-    else:
-        form = SecurityQuestionVerificationForm(question.question_text)
-    
-    return render(request, 'users/verify_ip.html', {'form': form})
+                print("Answer verification failed")
+                messages.error(request, 'Incorrect answer')
+        
+        return render(request, 'users/verify_ip.html')
+        
+    except User.DoesNotExist:
+        print(f"User not found with id: {pending_user_id}")
+        messages.error(request, 'User not found')
+        return redirect('users:login')
 
 @login_required
 def message_box(request):
@@ -207,4 +318,29 @@ def delete_message(request, message_id):
     except UserMessage.DoesNotExist:
         messages.error(request, 'Message not found.')
     
-    return redirect('message_box') 
+    return redirect('message_box')
+
+def send_verification_email(request, user):
+    verification = EmailVerification.objects.create(user=user)
+    
+    verification_url = f"{request.scheme}://{request.get_host()}/users/verify-email/{verification.token}/"
+    
+    send_mail(
+        'Verify your email',
+        f'Please click this link to verify your email: {verification_url}',
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
+
+@login_required
+def verify_email(request, token):
+    try:
+        verification = EmailVerification.objects.get(token=token, verified=False)
+        verification.verified = True
+        verification.save()
+        messages.success(request, 'Email verified successfully!')
+    except EmailVerification.DoesNotExist:
+        messages.error(request, 'Invalid verification token.')
+    
+    return redirect('users:profile') 
