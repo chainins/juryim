@@ -66,15 +66,18 @@ ROOT_URLCONF = "juryim.urls"
 
 TEMPLATES = [
     {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'juryim' / 'templates'],
-        "APP_DIRS": True,
-        "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.debug",
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            BASE_DIR / 'juryim' / 'templates',
+            BASE_DIR / 'financial' / 'templates',
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
                 'social_django.context_processors.backends',
                 'social_django.context_processors.login_redirect',
             ],
@@ -134,9 +137,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Add this line to specify the custom user model
 AUTH_USER_MODEL = 'users.User'
 
-# Add these settings
+# Update login URL to use your custom login view
+LOGIN_URL = 'users:login'  # Change from '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGOUT_REDIRECT_URL = 'users:login'
 
 # Add channel layers configuration
 CHANNEL_LAYERS = {
@@ -208,11 +212,12 @@ NETWORK_SETTINGS = {
 
 # Email Settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'  # Or your SMTP server
+EMAIL_HOST = 'smtp.gmail.com'  # Update with your SMTP server
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your-email@gmail.com'
-EMAIL_HOST_PASSWORD = 'your-app-password'  # Use app password for Gmail
+EMAIL_HOST_USER = 'pekdream2013@gmail.com'  # Update with your email
+EMAIL_HOST_USER_PASSWORD = 'just&go_6530'  # Update with your password
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Notification Settings
 WITHDRAWAL_NOTIFICATIONS = True
