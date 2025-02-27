@@ -1,11 +1,15 @@
 from django.urls import path
-from financial.views import dashboard, deposit, withdraw, transactions
+from django.contrib.auth import views as auth_views
+from . import views
 
 app_name = 'financial'
 
 urlpatterns = [
-    path('dashboard/', dashboard, name='financial_dashboard'),
-    path('deposit/', deposit, name='deposit'),
-    path('withdraw/', withdraw, name='withdraw'),
-    path('transactions/', transactions, name='transactions'),
+    # Account management
+    path('account/', views.account_overview, name='account_overview'),
+    path('deposit/', views.deposit_request, name='deposit_request'),
+    path('withdraw/', views.withdrawal_request, name='withdrawal_request'),
+    path('transactions/', views.transaction_history, name='transaction_history'),
+    
+    # Keep any existing URLs...
 ] 
