@@ -1,6 +1,6 @@
 from django import forms
 from decimal import Decimal
-from .models import WithdrawalRequest, PaymentProvider
+from .models import WithdrawalRequest, PaymentProvider, DepositRequest
 
 class TransferForm(forms.Form):
     amount = forms.DecimalField(
@@ -70,3 +70,14 @@ class DepositAddressForm(forms.Form):
         networks = kwargs.pop('networks', [])
         super().__init__(*args, **kwargs)
         self.fields['network'].choices = networks 
+
+class DepositForm(forms.ModelForm):
+    class Meta:
+        model = DepositRequest
+        fields = ['amount']
+        
+    def clean_amount(self):
+        amount = self.cleaned_data['amount']
+        if amount <= Decimal('0'):
+            raise forms.ValidationError("Amount must be greater than 0")
+        return amount 

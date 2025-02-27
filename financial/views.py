@@ -6,11 +6,11 @@ from django.db import transaction
 from django.utils import timezone
 from .models import (
     FinancialAccount, Transaction, WithdrawalRequest,
-    DepositAddress, PaymentProvider
+    DepositAddress, PaymentProvider, DepositRequest
 )
 from groups.models import GroupFund
 from decimal import Decimal
-from .forms import WithdrawalForm, DepositAddressForm
+from .forms import WithdrawalForm, DepositForm
 from .services import FinancialService, WithdrawalService
 from .utils import generate_qr_code  # Import our QR code utility
 from django.utils.decorators import method_decorator
@@ -304,4 +304,57 @@ def withdraw(request):
 def transactions(request):
     """Transaction history view"""
     transactions = Transaction.objects.filter(user=request.user).order_by('-created_at')
-    return render(request, 'financial/transactions.html', {'transactions': transactions}) 
+    return render(request, 'financial/transactions.html', {'transactions': transactions})
+
+@login_required
+def account_overview(request):
+    """Show user's financial account overview"""
+    account = FinancialAccount.objects.get_or_create(user=request.user)[0]
+    recent_transactions = Transaction.objects.filter(account=account).order_by('-created_at')[:10]
+    
+    context = {
+        'account': account,
+        'recent_transactions': recent_transactions,
+    }
+    return render(request, 'financial/account_overview.html', context)
+
+@login_required
+def withdrawal_request(request):
+    """Handle withdrawal requests"""
+    if request.method == 'POST':
+        form = WithdrawalForm(request.POST)
+        if form.is_valid():
+            withdrawal = form.save(commit=False)
+            withdrawal.account = request.user.financialaccount
+            withdrawal.save()
+            messages.success(request, 'Withdrawal request submitted successfully')
+            return redirect('financial:account_overview')
+    else:
+        form = WithdrawalForm()
+    
+    return render(request, 'financial/withdrawal_form.html', {'form': form})
+
+@login_required
+def deposit_request(request):
+    """Handle deposit requests"""
+    if request.method == 'POST':
+        form = DepositForm(request.POST)
+        if form.is_valid():
+            deposit = form.save(commit=False)
+            deposit.user = request.user
+            deposit.save()
+            messages.success(request, 'Deposit request submitted successfully')
+            return redirect('financial:account_overview')
+    else:
+        form = DepositForm()
+    
+    return render(request, 'financial/deposit_form.html', {'form': form})
+
+@login_required
+def transaction_history(request):
+    """Show transaction history"""
+    account = request.user.financialaccount
+    transactions = Transaction.objects.filter(account=account).order_by('-created_at')
+    return render(request, 'financial/transaction_history.html', {
+        'transactions': transactions
+    }) 

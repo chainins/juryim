@@ -1,0 +1,51 @@
+{% extends 'financial/base_financial.html' %}
+
+{% block financial_content %}
+<div class="card">
+    <div class="card-header">
+        <h3>Account Overview</h3>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Available Balance</h5>
+                <h2 class="text-primary">{{ account.balance }}</h2>
+            </div>
+            <div class="col-md-6">
+                <h5>Frozen Balance</h5>
+                <h2 class="text-secondary">{{ account.frozen_balance }}</h2>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <h4>Recent Transactions</h4>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in recent_transactions %}
+                    <tr>
+                        <td>{{ transaction.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>{{ transaction.get_transaction_type_display }}</td>
+                        <td>{{ transaction.amount }}</td>
+                        <td>{{ transaction.get_status_display }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">No recent transactions</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 
