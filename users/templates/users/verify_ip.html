@@ -22,7 +22,7 @@
                     </div>
                     {% endif %}
                     
-                    <form method="post">
+                    <form id="verifyForm" method="post">
                         {% csrf_token %}
                         <div class="form-group mb-3">
                             <label class="form-label">Security Question:</label>
@@ -35,9 +35,42 @@
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Submit Answer</button>
                     </form>
+                    <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.getElementById('verifyForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.redirect_url;  // Redirect on success
+        } else {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = data.message;
+            errorDiv.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = 'An error occurred. Please try again.';
+        errorDiv.style.display = 'block';
+    });
+});
+</script>
 {% endblock %} 

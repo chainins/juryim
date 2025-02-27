@@ -10,7 +10,7 @@ class IPTrackingMiddleware:
 
     def __call__(self, request):
         if request.user.is_authenticated:
-            # Skip IP verification for static files, admin, and certain paths
+            # Skip verification for these paths
             if any([
                 request.path.startswith('/static/'),
                 request.path.startswith('/admin/'),
@@ -20,14 +20,14 @@ class IPTrackingMiddleware:
             ]):
                 return self.get_response(request)
 
-            current_ip = request.META.get('REMOTE_ADDR')
             try:
-                # Check if this IP is already verified for this user
+                # Check if this IP is verified
+                current_ip = request.META.get('REMOTE_ADDR')
                 UserIPAddress.objects.get(user=request.user, ip_address=current_ip)
                 return self.get_response(request)
             except UserIPAddress.DoesNotExist:
+                # Only redirect if not already on verify-ip page
                 if not request.path.endswith('/verify-ip/'):
-                    messages.warning(request, 'Please verify your identity for this new IP address.')
                     return redirect('users:verify_ip')
 
         return self.get_response(request)

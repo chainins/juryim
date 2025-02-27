@@ -16,6 +16,8 @@ from django.conf import settings
 from django.utils import timezone
 import uuid
 import logging
+from django.http import JsonResponse
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -135,17 +137,40 @@ class UserViews:
     def verify_ip(request):
         try:
             security_question = SecurityQuestion.objects.get(user=request.user)
-            print(f"Debug - Security Question: {security_question.question}")  # Debug log
             
-            # Always show the form with the security question
+            if request.method == "POST":
+                user_answer = request.POST.get('security_answer')
+                if user_answer:
+                    if security_question.answer.lower() == user_answer.lower():
+                        from .models import UserIPAddress
+                        UserIPAddress.objects.get_or_create(
+                            user=request.user,
+                            ip_address=request.META.get('REMOTE_ADDR')
+                        )
+                        return JsonResponse({
+                            'success': True,
+                            'redirect_url': reverse('home'),
+                            'message': 'Verification successful!'
+                        })
+                    else:
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'Incorrect answer. Please try again.'
+                        })
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Please provide an answer.'
+                })
+            
             return render(request, 'users/verify_ip.html', {
-                'security_question': security_question.question,
-                'show_form': True  # Always show the form
+                'security_question': security_question.question
             })
             
         except SecurityQuestion.DoesNotExist:
-            messages.error(request, 'Security question not found.')
-            return redirect('home')
+            return JsonResponse({
+                'success': False,
+                'message': 'Security question not found.'
+            })
 
 def require_email(request):
     """Handle email collection for social auth"""
