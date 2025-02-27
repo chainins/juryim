@@ -321,18 +321,59 @@ def account_overview(request):
 @login_required
 def withdrawal_request(request):
     """Handle withdrawal requests"""
+    try:
+        account = FinancialAccount.objects.get(user=request.user)
+    except FinancialAccount.DoesNotExist:
+        messages.error(request, 'No financial account found')
+        return redirect('financial:account_overview')
+
     if request.method == 'POST':
         form = WithdrawalForm(request.POST)
+        form.user = request.user  # Add user to form for validation
+        
         if form.is_valid():
-            withdrawal = form.save(commit=False)
-            withdrawal.account = request.user.financialaccount
-            withdrawal.save()
-            messages.success(request, 'Withdrawal request submitted successfully')
-            return redirect('financial:account_overview')
+            try:
+                with transaction.atomic():  # Use transaction to ensure data consistency
+                    withdrawal = form.save(commit=False)
+                    withdrawal.user = request.user
+                    withdrawal.status = 'approved'  # For testing purposes
+                    withdrawal.processed_at = timezone.now()
+                    withdrawal.save()
+                    
+                    amount = form.cleaned_data['amount']
+                    
+                    # Create transaction record
+                    Transaction.objects.create(
+                        account=account,
+                        transaction_type='withdrawal',
+                        amount=amount,
+                        status='completed',
+                        description=f'Withdrawal of {amount} via {withdrawal.network}',
+                        completed_at=timezone.now()
+                    )
+                    
+                    # Update account balance
+                    account.balance -= amount
+                    account.total_withdrawn += amount
+                    account.save()
+                    
+                    messages.success(request, f'Successfully withdrew {amount} {withdrawal.network}')
+                    return redirect('financial:account_overview')
+                    
+            except Exception as e:
+                messages.error(request, f'Error processing withdrawal: {str(e)}')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
         form = WithdrawalForm()
-    
-    return render(request, 'financial/withdrawal_form.html', {'form': form})
+
+    context = {
+        'form': form,
+        'available_balance': account.balance
+    }
+    return render(request, 'financial/withdrawal_form.html', context)
 
 @login_required
 def deposit_request(request):
@@ -340,10 +381,33 @@ def deposit_request(request):
     if request.method == 'POST':
         form = DepositForm(request.POST)
         if form.is_valid():
+            amount = form.cleaned_data['amount']
+            
+            # Create or get user's financial account
+            account, created = FinancialAccount.objects.get_or_create(user=request.user)
+            
+            # Create deposit request
             deposit = form.save(commit=False)
             deposit.user = request.user
+            deposit.status = 'approved'  # For testing, auto-approve deposits
             deposit.save()
-            messages.success(request, 'Deposit request submitted successfully')
+            
+            # Create transaction record
+            transaction = Transaction.objects.create(
+                account=account,
+                transaction_type='deposit',
+                amount=amount,
+                status='completed',
+                description=f'Deposit of {amount}',
+                completed_at=timezone.now()
+            )
+            
+            # Update account balance
+            account.balance += amount
+            account.total_deposited += amount
+            account.save()
+            
+            messages.success(request, f'Deposit of {amount} processed successfully')
             return redirect('financial:account_overview')
     else:
         form = DepositForm()
