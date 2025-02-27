@@ -1,15 +1,52 @@
 {% extends 'base.html' %}
 
+{% block extra_css %}
+<style>
+.balance-card {
+    background: linear-gradient(45deg, #2193b0, #6dd5ed);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+.transaction-table {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+.nav-financial {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row">
-        <!-- Sidebar -->
+        <!-- Enhanced Sidebar -->
         <div class="col-md-3">
-            <div class="list-group">
-                <a href="{% url 'financial:account_overview' %}" class="list-group-item list-group-item-action">Account Overview</a>
-                <a href="{% url 'financial:deposit_request' %}" class="list-group-item list-group-item-action">Deposit</a>
-                <a href="{% url 'financial:withdrawal_request' %}" class="list-group-item list-group-item-action">Withdraw</a>
-                <a href="{% url 'financial:transaction_history' %}" class="list-group-item list-group-item-action">Transaction History</a>
+            <div class="nav-financial">
+                <div class="list-group">
+                    <a href="{% url 'financial:account_overview' %}" 
+                       class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'account_overview' %}active{% endif %}">
+                        <i class="fas fa-home"></i> Account Overview
+                    </a>
+                    <a href="{% url 'financial:deposit_request' %}" 
+                       class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'deposit_request' %}active{% endif %}">
+                        <i class="fas fa-arrow-down"></i> Deposit
+                    </a>
+                    <a href="{% url 'financial:withdrawal_request' %}" 
+                       class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'withdrawal_request' %}active{% endif %}">
+                        <i class="fas fa-arrow-up"></i> Withdraw
+                    </a>
+                    <a href="{% url 'financial:transaction_history' %}" 
+                       class="list-group-item list-group-item-action {% if request.resolver_match.url_name == 'transaction_history' %}active{% endif %}">
+                        <i class="fas fa-history"></i> Transaction History
+                    </a>
+                </div>
             </div>
         </div>
         
@@ -19,4 +56,19 @@
         </div>
     </div>
 </div>
+
+{% block extra_js %}
+<script>
+// Form validation
+$(document).ready(function() {
+    $('.needs-validation').submit(function(event) {
+        if (!this.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        $(this).addClass('was-validated');
+    });
+});
+</script>
+{% endblock %}
 {% endblock %} 
