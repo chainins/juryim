@@ -138,8 +138,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = 'users.User'
 
 # Update login URL to use your custom login view
-LOGIN_URL = 'users:login'  # Change from '/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = 'users:login'
+LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'users:login'
 
 # Add channel layers configuration

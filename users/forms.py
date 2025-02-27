@@ -106,14 +106,10 @@ class SecurityQuestionVerificationForm(forms.Form):
 
 class SecurityAnswerForm(forms.Form):
     security_answer = forms.CharField(
-        max_length=200,
         required=True,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Enter your answer',
-            'id': 'id_security_answer',
-            'name': 'security_answer',
-            'autocomplete': 'off'
+            'placeholder': 'Enter your answer here'
         })
     )
 

@@ -276,7 +276,7 @@ def dashboard(request):
     """Financial dashboard view"""
     context = {
         'balance': request.user.balance if hasattr(request.user, 'balance') else 0,
-        'transactions': Transaction.objects.filter(user=request.user).order_by('-created_at')[:5]
+        'transactions': Transaction.objects.filter(account__user=request.user).order_by('-created_at')[:5]
     }
     return render(request, 'financial/dashboard.html', context)
 

@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
 from django.contrib.auth import get_user_model
+import uuid
+from django.utils import timezone
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -29,6 +31,8 @@ class User(AbstractUser):
     phone_verified = models.BooleanField(default=False)
     id_verified = models.BooleanField(default=False)
 
+    email_verification_token = models.CharField(max_length=100, null=True, blank=True)
+
     class Meta:
         db_table = 'users'
 
@@ -43,18 +47,14 @@ class UserIP(models.Model):
         unique_together = ['user', 'ip_address']
 
 class SecurityQuestion(models.Model):
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE,
-        null=True,  # Allow null temporarily for migration
-        default=1   # Default to user ID 1 (usually admin)
-    )
-    question = models.CharField(max_length=255, default="What is your mother's maiden name?")
-    answer = models.CharField(max_length=255, default="Not set")
-    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey('User', on_delete=models.CASCADE, null=True)
+    question = models.CharField(max_length=200, null=True)
+    answer = models.CharField(max_length=200, null=True)
 
-    def __str__(self):
-        return f"{self.user.username}'s security question"
+    def verify_answer(self, provided_answer):
+        if not provided_answer or not self.answer:
+            return False
+        return self.answer.lower() == provided_answer.lower()
 
 class UserSecurityQuestion(models.Model):
     user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='security_questions')
@@ -95,4 +95,25 @@ class Message(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Message from {self.sender} to {self.recipient}: {self.subject}" 
+        return f"Message from {self.sender} to {self.recipient}: {self.subject}"
+
+class EmailVerification(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    token = models.UUIDField(default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    verified = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"Email verification for {self.user.email}"
+
+class UserIPAddress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    ip_address = models.GenericIPAddressField(null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    last_used = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-last_used']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.ip_address}" 

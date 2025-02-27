@@ -7,10 +7,10 @@ app_name = 'users'
 
 urlpatterns = [
     # User authentication
-    path('register/', views.UserViews.register, name='register'),
+    path('register/', UserViews.register, name='register'),
     path('verify-email/<str:token>/', views.UserViews.verify_email, name='verify_email'),
-    path('login/', views.UserViews.login, name='login'),
-    path('logout/', views.UserViews.logout, name='logout'),
+    path('login/', UserViews.login, name='login'),
+    path('logout/', UserViews.logout, name='logout'),
     path('profile/', views.UserViews.profile, name='profile'),
     path('settings/', views.UserViews.settings, name='settings'),
     path('password-reset/', views.UserViews.password_reset, name='password_reset'),
@@ -21,5 +21,5 @@ urlpatterns = [
     
     # Add new URL for email verification
     path('verify-email/<uuid:token>/', views.verify_email, name='verify_email'),
-    path('verify-ip/', views.UserViews.verify_ip, name='verify_ip'),
+    path('verify-ip/', UserViews.verify_ip, name='verify_ip'),
 ] 

@@ -33,7 +33,7 @@ class Transaction(models.Model):
         ('cancelled', 'Cancelled')
     )
 
-    account = models.ForeignKey(FinancialAccount, on_delete=models.CASCADE)
+    account = models.ForeignKey('FinancialAccount', on_delete=models.CASCADE)
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
     amount = models.DecimalField(max_digits=18, decimal_places=8)
     fee = models.DecimalField(max_digits=18, decimal_places=8, default=Decimal('0'))
