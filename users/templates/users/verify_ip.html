@@ -4,54 +4,29 @@
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <div class="card mt-5 shadow">
-                <div class="card-body p-4">
-                    <h2 class="card-title text-center mb-4">Verify Your Identity</h2>
-                    
-                    <div class="alert alert-info">
-                        We noticed you're accessing from a new IP address. Please verify your identity.
-                    </div>
+            <div class="card mt-5">
+                <div class="card-body">
+                    <h2 class="text-center mb-4">Verify Your Identity</h2>
                     
                     {% if messages %}
-                    <div class="messages mb-4">
                         {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
+                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
                         {% endfor %}
-                    </div>
                     {% endif %}
                     
-                    <!-- Add novalidate to see raw form submission -->
-                    <form method="post" action="{% url 'users:verify_ip' %}" novalidate>
+                    <form method="POST">
                         {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="id_security_answer" class="form-label">{{ security_question }}</label>
+                        <div class="form-group mb-3">
+                            <label class="form-label">Security Question:</label>
+                            <p class="mb-3">{{ security_question }}</p>
                             <input type="text" 
                                    name="security_answer" 
-                                   id="id_security_answer" 
-                                   class="form-control {% if form.security_answer.errors %}is-invalid{% endif %}" 
-                                   required 
+                                   class="form-control" 
                                    placeholder="Enter your answer"
-                                   value="{{ form.security_answer.value|default:'' }}">
-                            {% if form.security_answer.errors %}
-                            <div class="invalid-feedback">
-                                {{ form.security_answer.errors|join:", " }}
-                            </div>
-                            {% endif %}
+                                   required>
                         </div>
-                        
-                        <button type="submit" class="btn btn-primary w-100 py-2 mt-3">Verify</button>
+                        <button type="submit" class="btn btn-primary w-100">Submit Answer</button>
                     </form>
-
-                    <!-- Debug information -->
-                    {% if debug %}
-                    <div class="mt-3">
-                        <pre>Form data: {{ form.data }}</pre>
-                        <pre>Form errors: {{ form.errors }}</pre>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>

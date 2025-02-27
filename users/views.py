@@ -133,51 +133,18 @@ class UserViews:
     @staticmethod
     @login_required
     def verify_ip(request):
-        print("=== VERIFY IP DEBUG ===")
-        print(f"Method: {request.method}")
-        if request.method == 'POST':
-            print("POST Data:", request.POST)
-        
         try:
             security_question = SecurityQuestion.objects.get(user=request.user)
-            print(f"Security Question: {security_question.question}")
-            print(f"Stored Answer: {security_question.answer}")
+            print(f"Debug - Security Question: {security_question.question}")  # Debug log
             
-            if request.method == 'POST':
-                form = SecurityAnswerForm(request.POST)
-                print(f"Form is bound: {form.is_bound}")
-                print(f"Form is valid: {form.is_valid()}")
-                print(f"Form errors: {form.errors}")
-                
-                if form.is_valid():
-                    user_answer = form.cleaned_data['security_answer']
-                    print(f"User Answer: {user_answer}")
-                    
-                    if security_question.answer.lower() == user_answer.lower():
-                        from .models import UserIPAddress
-                        UserIPAddress.objects.get_or_create(
-                            user=request.user,
-                            ip_address=request.META.get('REMOTE_ADDR')
-                        )
-                        messages.success(request, 'IP verification successful!')
-                        return redirect('home')
-                    else:
-                        messages.error(request, 'Incorrect answer. Please try again.')
-            else:
-                form = SecurityAnswerForm()
-            
+            # Always show the form with the security question
             return render(request, 'users/verify_ip.html', {
-                'form': form,
-                'security_question': security_question.question
+                'security_question': security_question.question,
+                'show_form': True  # Always show the form
             })
             
         except SecurityQuestion.DoesNotExist:
-            print("Security question not found for user:", request.user)
             messages.error(request, 'Security question not found.')
-            return redirect('home')
-        except Exception as e:
-            print(f"Unexpected error: {str(e)}")
-            messages.error(request, f'An error occurred: {str(e)}')
             return redirect('home')
 
 def require_email(request):
