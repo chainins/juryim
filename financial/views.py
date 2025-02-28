@@ -401,10 +401,10 @@ def deposit_request(request):
                     # Create or get user's financial account
                     account, created = FinancialAccount.objects.get_or_create(user=request.user)
                     
-                    # Create deposit request
+                    # Create deposit request and transaction
                     deposit = form.save(commit=False)
                     deposit.user = request.user
-                    deposit.status = 'approved'  # For testing, auto-approve deposits
+                    deposit.status = 'approved'
                     deposit.save()
                     
                     # Create transaction record
@@ -422,14 +422,15 @@ def deposit_request(request):
                     account.total_deposited += amount
                     account.save()
                     
-                    # Create notification
-                    create_financial_notification(
+                    # Create and send notification
+                    notification = create_financial_notification(
                         user=request.user,
                         title='Deposit Successful',
                         message=f'Your deposit of {amount} has been processed successfully.',
                         priority='medium',
                         link=reverse('financial:account_overview')
                     )
+                    send_notification(request.user, notification)
                     
                     messages.success(request, f'Deposit of {amount} processed successfully')
                     return redirect('financial:account_overview')
