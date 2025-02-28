@@ -120,5 +120,71 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class NotificationHandler {
+            constructor() {
+                this.socket = null;
+                this.connect();
+            }
+
+            connect() {
+                const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+                this.socket = new WebSocket(
+                    `${wsScheme}://${window.location.host}/ws/notifications/`
+                );
+
+                this.socket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'notification') {
+                        this.showNotification(data.notification);
+                    }
+                };
+
+                this.socket.onclose = () => {
+                    console.log('WebSocket disconnected, attempting to reconnect...');
+                    setTimeout(() => this.connect(), 3000);
+                };
+            }
+
+            showNotification(notification) {
+                // Update notification bell badge
+                const badge = document.querySelector('#notificationBadge');
+                const currentCount = parseInt(badge?.textContent || '0');
+                if (badge) {
+                    badge.textContent = currentCount + 1;
+                    badge.style.display = 'inline';
+                }
+
+                // Add notification to dropdown
+                const dropdownMenu = document.querySelector('#notificationDropdown + .dropdown-menu');
+                if (dropdownMenu) {
+                    const notificationItem = document.createElement('a');
+                    notificationItem.className = 'dropdown-item fw-bold';
+                    notificationItem.href = notification.link || '#';
+                    notificationItem.textContent = notification.title;
+                    
+                    // Insert at the top
+                    dropdownMenu.insertBefore(notificationItem, dropdownMenu.firstChild);
+                }
+
+                // Show browser notification if permitted
+                if (Notification.permission === 'granted') {
+                    new Notification(notification.title, {
+                        body: notification.message
+                    });
+                }
+            }
+        }
+
+        // Initialize notification handler when document is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new NotificationHandler();
+
+            // Request notification permission
+            if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        });
+    </script>
 </body>
 </html> 
