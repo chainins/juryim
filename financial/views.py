@@ -12,9 +12,10 @@ from groups.models import GroupFund
 from decimal import Decimal
 from .forms import WithdrawalForm, DepositForm
 from .services import FinancialService, WithdrawalService
-from .utils import generate_qr_code  # Import our QR code utility
+from .utils import generate_qr_code, create_financial_notification
 from django.utils.decorators import method_decorator
 from django.conf import settings
+from django.urls import reverse
 
 class FinancialViews:
     @staticmethod
@@ -329,18 +330,19 @@ def withdrawal_request(request):
 
     if request.method == 'POST':
         form = WithdrawalForm(request.POST)
-        form.user = request.user  # Add user to form for validation
+        form.user = request.user
         
         if form.is_valid():
             try:
-                with transaction.atomic():  # Use transaction to ensure data consistency
+                with transaction.atomic():
                     withdrawal = form.save(commit=False)
                     withdrawal.user = request.user
-                    withdrawal.status = 'approved'  # For testing purposes
+                    withdrawal.status = 'approved'
                     withdrawal.processed_at = timezone.now()
                     withdrawal.save()
                     
                     amount = form.cleaned_data['amount']
+                    network = form.cleaned_data['network']
                     
                     # Create transaction record
                     Transaction.objects.create(
@@ -348,7 +350,7 @@ def withdrawal_request(request):
                         transaction_type='withdrawal',
                         amount=amount,
                         status='completed',
-                        description=f'Withdrawal of {amount} via {withdrawal.network}',
+                        description=f'Withdrawal of {amount} via {network}',
                         completed_at=timezone.now()
                     )
                     
@@ -357,7 +359,16 @@ def withdrawal_request(request):
                     account.total_withdrawn += amount
                     account.save()
                     
-                    messages.success(request, f'Successfully withdrew {amount} {withdrawal.network}')
+                    # Create notification
+                    create_financial_notification(
+                        user=request.user,
+                        title='Withdrawal Processed',
+                        message=f'Your withdrawal of {amount} {network} has been processed.',
+                        priority='high',
+                        link=reverse('financial:account_overview')
+                    )
+                    
+                    messages.success(request, f'Successfully withdrew {amount} {network}')
                     return redirect('financial:account_overview')
                     
             except Exception as e:

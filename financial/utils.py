@@ -1,6 +1,7 @@
 import qrcode
 import base64
 from io import BytesIO
+from user_notifications.models import Notification
 
 def generate_qr_code(data):
     """Generate QR code and return as base64 string"""
@@ -18,4 +19,15 @@ def generate_qr_code(data):
     # Convert image to base64
     buffer = BytesIO()
     img.save(buffer, format='PNG')
-    return base64.b64encode(buffer.getvalue()).decode() 
+    return base64.b64encode(buffer.getvalue()).decode()
+
+def create_financial_notification(user, title, message, priority='medium', link=None):
+    """Create a financial notification for the user"""
+    return Notification.objects.create(
+        user=user,
+        notification_type='financial_update',
+        title=title,
+        message=message,
+        priority=priority,
+        link=link
+    ) 
