@@ -1,6 +1,10 @@
 from django.db import models
 from django.conf import settings
 
+class NotificationManager(models.Manager):
+    def unread(self):
+        return self.filter(is_read=False)
+
 class Notification(models.Model):
     NOTIFICATION_TYPES = (
         ('task_update', 'Task Update'),
@@ -28,6 +32,8 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(null=True, blank=True)
+
+    objects = NotificationManager()
 
     class Meta:
         db_table = 'notifications'

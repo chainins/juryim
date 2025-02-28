@@ -85,9 +85,9 @@
             <div class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
                     <i class="fas fa-bell"></i>
-                    {% with unread_count=user.notification_set.all|length %}
+                    {% with unread_count=user.notification_set.unread.count %}
                         <span id="notificationBadge" class="badge bg-danger" {% if not unread_count %}style="display: none;"{% endif %}>
-                            {{ user.notification_set.all|length }}
+                            {{ unread_count }}
                         </span>
                     {% endwith %}
                 </a>
@@ -95,8 +95,9 @@
                     {% with notifications=user.notification_set.all|slice:":5" %}
                         {% if notifications %}
                             {% for notification in notifications %}
-                                <a class="dropdown-item {% if not notification.is_read %}fw-bold{% endif %}" 
-                                   href="{{ notification.link|default:'#' }}">
+                                <a class="dropdown-item notification-item {% if not notification.is_read %}fw-bold{% endif %}" 
+                                   href="{{ notification.link|default:'#' }}"
+                                   data-notification-id="{{ notification.id }}">
                                     {{ notification.title }}
                                 </a>
                             {% endfor %}
@@ -120,20 +121,109 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const notificationSocket = new WebSocket(
-            'ws://' + window.location.host + '/ws/notifications/'
-        );
+        document.addEventListener('DOMContentLoaded', function() {
+            const markAllReadBtn = document.getElementById('markAllReadBtn');
+            const notificationBadge = document.getElementById('notificationBadge');
+            const dropdownMenu = document.querySelector('.dropdown-menu');
 
-        notificationSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            if (data.type === 'notification_update') {
-                updateNotificationBadge(data.unread_count);
+            // Function to update all notification items and badge
+            function updateAllNotifications() {
+                // Update badge immediately
+                notificationBadge.style.display = 'none';
+
+                // Update all notification items in both dropdown and main list
+                const allNotificationItems = document.querySelectorAll('.notification-item');
+                allNotificationItems.forEach(item => {
+                    item.classList.remove('fw-bold');
+                });
+
+                // If we're in the dropdown, update those items specifically
+                if (dropdownMenu) {
+                    const dropdownItems = dropdownMenu.querySelectorAll('.notification-item');
+                    dropdownItems.forEach(item => {
+                        item.classList.remove('fw-bold');
+                    });
+                }
             }
-        };
 
-        notificationSocket.onclose = function(e) {
-            console.error('Notification socket closed unexpectedly');
-        };
+            // Mark all as read handler
+            if (markAllReadBtn) {
+                markAllReadBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation(); // Prevent dropdown from closing
+
+                    // Update UI immediately before server request
+                    updateAllNotifications();
+
+                    // Make server request
+                    fetch('/notifications/mark-all-read/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) {
+                            // Revert changes if server request failed
+                            console.error('Failed to mark notifications as read');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+                });
+            }
+
+            // Individual notification click handler
+            document.addEventListener('click', function(e) {
+                const notificationItem = e.target.closest('.notification-item');
+                if (notificationItem) {
+                    const notificationId = notificationItem.dataset.notificationId;
+                    
+                    // Update UI immediately
+                    notificationItem.classList.remove('fw-bold');
+
+                    fetch(`/notifications/${notificationId}/mark-read/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken'),
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Update badge with new count
+                            if (data.unread_count > 0) {
+                                notificationBadge.textContent = data.unread_count;
+                                notificationBadge.style.display = '';
+                            } else {
+                                notificationBadge.style.display = 'none';
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                }
+            });
+
+            // Get CSRF token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+        });
     </script>
 </body>
 </html> 
