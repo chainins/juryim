@@ -78,9 +78,39 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container">
             <a class="navbar-brand" href="/">JuryIM</a>
+            {% if user.is_authenticated %}
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-bell"></i>
+                    {% with unread_count=user.notification_set.filter.count %}
+                        {% if unread_count > 0 %}
+                            <span class="badge bg-danger">{{ unread_count }}</span>
+                        {% endif %}
+                    {% endwith %}
+                </a>
+                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                    {% with notifications=user.notification_set.all|slice:":5" %}
+                        {% if notifications %}
+                            {% for notification in notifications %}
+                                <a class="dropdown-item {% if not notification.is_read %}fw-bold{% endif %}" 
+                                   href="{{ notification.link|default:'#' }}">
+                                    {{ notification.title }}
+                                </a>
+                            {% endfor %}
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-center" href="{% url 'user_notifications:list' %}">
+                                View All Notifications
+                            </a>
+                        {% else %}
+                            <span class="dropdown-item">No notifications</span>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </nav>
 
