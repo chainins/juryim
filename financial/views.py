@@ -16,6 +16,7 @@ from .utils import generate_qr_code, create_financial_notification
 from django.utils.decorators import method_decorator
 from django.conf import settings
 from django.urls import reverse
+from user_notifications.utils import send_notification
 
 class FinancialViews:
     @staticmethod
@@ -359,14 +360,15 @@ def withdrawal_request(request):
                     account.total_withdrawn += amount
                     account.save()
                     
-                    # Create notification
-                    create_financial_notification(
+                    # Create and send notification
+                    notification = create_financial_notification(
                         user=request.user,
                         title='Withdrawal Processed',
                         message=f'Your withdrawal of {amount} {network} has been processed.',
                         priority='high',
                         link=reverse('financial:account_overview')
                     )
+                    send_notification(request.user, notification)
                     
                     messages.success(request, f'Successfully withdrew {amount} {network}')
                     return redirect('financial:account_overview')
