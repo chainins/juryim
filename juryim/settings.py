@@ -145,16 +145,13 @@ LOGOUT_REDIRECT_URL = 'users:login'
 
 # Add channel layers configuration
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
-        },
-    },
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
 }
 
 # Update ASGI application
-ASGI_APPLICATION = 'juryim.asgi.application'
+ASGI_APPLICATION = 'juryim.routing.application'
 
 # Celery Configuration
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
