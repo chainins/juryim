@@ -85,11 +85,9 @@
             <div class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
                     <i class="fas fa-bell"></i>
-                    {% with unread_count=user.notification_set.filter.count %}
-                        {% if unread_count > 0 %}
-                            <span class="badge bg-danger">{{ unread_count }}</span>
-                        {% endif %}
-                    {% endwith %}
+                    <span id="notificationBadge" class="badge bg-danger" {% if not unread_count %}style="display: none;"{% endif %}>
+                        {{ unread_count }}
+                    </span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
                     {% with notifications=user.notification_set.all|slice:":5" %}
@@ -101,9 +99,8 @@
                                 </a>
                             {% endfor %}
                             <div class="dropdown-divider"></div>
-                            <a class="dropdown-item text-center" href="{% url 'user_notifications:list' %}">
-                                View All Notifications
-                            </a>
+                            <a href="#" class="dropdown-item text-center" id="markAllReadBtn">Mark All as Read</a>
+                            <a class="dropdown-item text-center" href="{% url 'user_notifications:list' %}">View All</a>
                         {% else %}
                             <span class="dropdown-item">No notifications</span>
                         {% endif %}
@@ -183,6 +180,36 @@
             // Request notification permission
             if (Notification.permission === 'default') {
                 Notification.requestPermission();
+            }
+
+            const markAllReadBtn = document.getElementById('markAllReadBtn');
+            if (markAllReadBtn) {
+                markAllReadBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    fetch('/notifications/mark-all-read/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Hide the badge
+                            const badge = document.getElementById('notificationBadge');
+                            if (badge) {
+                                badge.style.display = 'none';
+                                badge.textContent = '0';
+                            }
+                            
+                            // Remove bold styling from all notifications
+                            const notifications = document.querySelectorAll('.dropdown-item.fw-bold');
+                            notifications.forEach(item => {
+                                item.classList.remove('fw-bold');
+                            });
+                        }
+                    });
+                });
             }
         });
     </script>
