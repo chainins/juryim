@@ -85,11 +85,13 @@
             <div class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
                     <i class="fas fa-bell"></i>
-                    <span id="notificationBadge" class="badge bg-danger" {% if not unread_count %}style="display: none;"{% endif %}>
-                        {{ unread_count }}
-                    </span>
+                    {% with unread_count=user.notification_set.filter.is_read=False.count %}
+                        <span id="notificationBadge" class="badge bg-danger" {% if not unread_count %}style="display: none;"{% endif %}>
+                            {{ unread_count }}
+                        </span>
+                    {% endwith %}
                 </a>
-                <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown">
+                <div class="dropdown-menu dropdown-menu-end notification-menu" aria-labelledby="notificationDropdown">
                     {% with notifications=user.notification_set.all|slice:":5" %}
                         {% if notifications %}
                             {% for notification in notifications %}
@@ -121,13 +123,9 @@
         class NotificationHandler {
             constructor() {
                 this.socket = null;
-                this.connect();
-                this.initializeBadge();
-            }
-
-            initializeBadge() {
                 this.badge = document.getElementById('notificationBadge');
                 this.unreadCount = parseInt(this.badge?.textContent || '0');
+                this.connect();
             }
 
             connect() {
@@ -149,16 +147,21 @@
                 };
             }
 
-            showNotification(notification) {
-                // Update notification badge
+            updateBadge() {
                 if (this.badge) {
                     this.unreadCount += 1;
                     this.badge.textContent = this.unreadCount;
                     this.badge.style.display = 'inline';
+                    this.badge.classList.add('bg-danger');
                 }
+            }
 
-                // Add notification to dropdown
-                const dropdownMenu = document.querySelector('#notificationDropdown + .dropdown-menu');
+            showNotification(notification) {
+                // Update badge
+                this.updateBadge();
+
+                // Add to dropdown menu
+                const dropdownMenu = document.querySelector('.notification-menu');
                 if (dropdownMenu) {
                     const notificationItem = document.createElement('a');
                     notificationItem.className = 'dropdown-item fw-bold';
@@ -174,7 +177,7 @@
                     }
                 }
 
-                // Show browser notification if permitted
+                // Browser notification
                 if (Notification.permission === 'granted') {
                     new Notification(notification.title, {
                         body: notification.message
@@ -183,7 +186,7 @@
             }
         }
 
-        // Initialize notification handler when document is ready
+        // Initialize when document is ready
         document.addEventListener('DOMContentLoaded', () => {
             window.notificationHandler = new NotificationHandler();
 
