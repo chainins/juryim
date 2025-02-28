@@ -122,6 +122,12 @@
             constructor() {
                 this.socket = null;
                 this.connect();
+                this.initializeBadge();
+            }
+
+            initializeBadge() {
+                this.badge = document.getElementById('notificationBadge');
+                this.unreadCount = parseInt(this.badge?.textContent || '0');
             }
 
             connect() {
@@ -144,12 +150,11 @@
             }
 
             showNotification(notification) {
-                // Update notification bell badge
-                const badge = document.querySelector('#notificationBadge');
-                const currentCount = parseInt(badge?.textContent || '0');
-                if (badge) {
-                    badge.textContent = currentCount + 1;
-                    badge.style.display = 'inline';
+                // Update notification badge
+                if (this.badge) {
+                    this.unreadCount += 1;
+                    this.badge.textContent = this.unreadCount;
+                    this.badge.style.display = 'inline';
                 }
 
                 // Add notification to dropdown
@@ -161,7 +166,12 @@
                     notificationItem.textContent = notification.title;
                     
                     // Insert at the top
-                    dropdownMenu.insertBefore(notificationItem, dropdownMenu.firstChild);
+                    const firstItem = dropdownMenu.querySelector('.dropdown-item');
+                    if (firstItem) {
+                        dropdownMenu.insertBefore(notificationItem, firstItem);
+                    } else {
+                        dropdownMenu.appendChild(notificationItem);
+                    }
                 }
 
                 // Show browser notification if permitted
@@ -175,7 +185,7 @@
 
         // Initialize notification handler when document is ready
         document.addEventListener('DOMContentLoaded', () => {
-            new NotificationHandler();
+            window.notificationHandler = new NotificationHandler();
 
             // Request notification permission
             if (Notification.permission === 'default') {
