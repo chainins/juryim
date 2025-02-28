@@ -17,11 +17,32 @@ class TransferForm(forms.Form):
         return amount
 
 class WithdrawalForm(forms.ModelForm):
-    confirm_address = forms.CharField(max_length=100)
+    confirm_address = forms.CharField(
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirm withdrawal address'
+        })
+    )
     
     class Meta:
         model = WithdrawalRequest
         fields = ['amount', 'address', 'network']
+        widgets = {
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0.01',
+                'placeholder': 'Enter amount'
+            }),
+            'address': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter withdrawal address'
+            }),
+            'network': forms.Select(attrs={
+                'class': 'form-control'
+            })
+        }
         
     def __init__(self, *args, **kwargs):
         self.account = kwargs.pop('account', None)
@@ -61,6 +82,22 @@ class WithdrawalForm(forms.ModelForm):
         if address and confirm_address and address != confirm_address:
             raise forms.ValidationError("Addresses do not match")
             
+        amount = cleaned_data.get('amount')
+        network = cleaned_data.get('network')
+        
+        if amount and hasattr(self, 'user'):
+            account = self.user.financialaccount
+            if amount > account.balance:
+                raise forms.ValidationError("Insufficient balance for withdrawal")
+            
+            # Add network-specific validations
+            if network == 'BTC' and amount < Decimal('0.001'):
+                raise forms.ValidationError("Minimum BTC withdrawal is 0.001")
+            elif network == 'ETH' and amount < Decimal('0.01'):
+                raise forms.ValidationError("Minimum ETH withdrawal is 0.01")
+            elif network == 'USDT' and amount < Decimal('10'):
+                raise forms.ValidationError("Minimum USDT withdrawal is 10")
+        
         return cleaned_data
 
 class DepositAddressForm(forms.Form):

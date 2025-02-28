@@ -11,8 +11,9 @@
                 <p>Total Deposited: {{ user.financialaccount.total_deposited }}</p>
                 <p>Total Withdrawn: {{ user.financialaccount.total_withdrawn }}</p>
                 <div class="button-group">
-                    <a href="{% url 'financial:deposit' %}" class="button">Deposit</a>
-                    <a href="#" class="button">Withdraw</a>
+                    <a href="{% url 'financial:account_overview' %}" class="button">Account Overview</a>
+                    <a href="{% url 'financial:deposit_request' %}" class="button">Deposit</a>
+                    <a href="{% url 'financial:withdrawal_request' %}" class="button">Withdraw</a>
                 </div>
             </div>
             <div class="section">
@@ -21,11 +22,7 @@
                     {% if transactions %}
                         <ul class="transaction-list">
                         {% for tx in transactions %}
-                            <li>
-                                <span class="tx-type">{{ tx.get_transaction_type_display }}</span>
-                                <span class="tx-amount">{{ tx.amount }}</span>
-                                <span class="tx-status">{{ tx.get_status_display }}</span>
-                            </li>
+                            <li>{{ tx.get_transaction_type_display }} - ${{ tx.amount }}</li>
                         {% endfor %}
                         </ul>
                     {% else %}
@@ -55,8 +52,8 @@
         </div>
         <a href="{% url 'users:logout' %}" class="logout-button">Logout</a>
     {% else %}
-        <h2>Welcome to Juryim</h2>
-        <p>Please <a href="{% url 'users:login' %}">login</a> to continue.</p>
+        <h2>Welcome to Our Platform</h2>
+        <p>Please <a href="{% url 'users:login' %}">login</a> or <a href="{% url 'users:register' %}">register</a> to continue.</p>
     {% endif %}
 </div>
 {% endblock %}

@@ -57,25 +57,33 @@ class WithdrawalRequest(models.Model):
         ('cancelled', 'Cancelled')
     )
 
-    account = models.ForeignKey(FinancialAccount, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=18, decimal_places=8)
-    fee = models.DecimalField(max_digits=18, decimal_places=8, default=Decimal('0'))
-    address = models.CharField(max_length=100)  # Crypto address
-    network = models.CharField(max_length=50)  # Network/chain
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    transaction_hash = models.CharField(max_length=100, blank=True)
-    admin_notes = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
+    NETWORK_CHOICES = (
+        ('BTC', 'Bitcoin'),
+        ('ETH', 'Ethereum'),
+        ('USDT', 'USDT-TRC20'),
+        ('BSC', 'Binance Smart Chain'),
+    )
 
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE,
+        null=True,  # Allow null temporarily for migration
+        blank=True
+    )
+    amount = models.DecimalField(max_digits=18, decimal_places=8)
+    address = models.CharField(max_length=100)
+    network = models.CharField(max_length=10, choices=NETWORK_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    
     def __str__(self):
-        return f"{self.account.user.username} - {self.amount} - {self.status}"
+        return f"{self.user.username if self.user else 'Unknown'} - {self.amount} {self.network}"
     
     def process_withdrawal(self):
-        if self.status == 'approved' and not self.completed_at:
+        if self.status == 'approved' and not self.processed_at:
             # Add withdrawal processing logic here
-            self.completed_at = timezone.now()
+            self.processed_at = timezone.now()
             self.save()
 
 class DepositAddress(models.Model):

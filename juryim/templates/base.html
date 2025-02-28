@@ -85,9 +85,9 @@
             <div class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown">
                     <i class="fas fa-bell"></i>
-                    {% with unread_count=user.notification_set.filter.is_read=False.count %}
+                    {% with unread_count=user.notification_set.all|length %}
                         <span id="notificationBadge" class="badge bg-danger" {% if not unread_count %}style="display: none;"{% endif %}>
-                            {{ unread_count }}
+                            {{ user.notification_set.all|length }}
                         </span>
                     {% endwith %}
                 </a>
@@ -120,111 +120,20 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        class NotificationHandler {
-            constructor() {
-                this.socket = null;
-                this.badge = document.getElementById('notificationBadge');
-                this.unreadCount = parseInt(this.badge?.textContent || '0');
-                this.connect();
+        const notificationSocket = new WebSocket(
+            'ws://' + window.location.host + '/ws/notifications/'
+        );
+
+        notificationSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'notification_update') {
+                updateNotificationBadge(data.unread_count);
             }
+        };
 
-            connect() {
-                const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-                this.socket = new WebSocket(
-                    `${wsScheme}://${window.location.host}/ws/notifications/`
-                );
-
-                this.socket.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    if (data.type === 'notification') {
-                        this.showNotification(data.notification);
-                    }
-                };
-
-                this.socket.onclose = () => {
-                    console.log('WebSocket disconnected, attempting to reconnect...');
-                    setTimeout(() => this.connect(), 3000);
-                };
-            }
-
-            updateBadge() {
-                if (this.badge) {
-                    this.unreadCount += 1;
-                    this.badge.textContent = this.unreadCount;
-                    this.badge.style.display = 'inline';
-                    this.badge.classList.add('bg-danger');
-                }
-            }
-
-            showNotification(notification) {
-                // Update badge
-                this.updateBadge();
-
-                // Add to dropdown menu
-                const dropdownMenu = document.querySelector('.notification-menu');
-                if (dropdownMenu) {
-                    const notificationItem = document.createElement('a');
-                    notificationItem.className = 'dropdown-item fw-bold';
-                    notificationItem.href = notification.link || '#';
-                    notificationItem.textContent = notification.title;
-                    
-                    // Insert at the top
-                    const firstItem = dropdownMenu.querySelector('.dropdown-item');
-                    if (firstItem) {
-                        dropdownMenu.insertBefore(notificationItem, firstItem);
-                    } else {
-                        dropdownMenu.appendChild(notificationItem);
-                    }
-                }
-
-                // Browser notification
-                if (Notification.permission === 'granted') {
-                    new Notification(notification.title, {
-                        body: notification.message
-                    });
-                }
-            }
-        }
-
-        // Initialize when document is ready
-        document.addEventListener('DOMContentLoaded', () => {
-            window.notificationHandler = new NotificationHandler();
-
-            // Request notification permission
-            if (Notification.permission === 'default') {
-                Notification.requestPermission();
-            }
-
-            const markAllReadBtn = document.getElementById('markAllReadBtn');
-            if (markAllReadBtn) {
-                markAllReadBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    fetch('/notifications/mark-all-read/', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': getCookie('csrftoken')
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success') {
-                            // Hide the badge
-                            const badge = document.getElementById('notificationBadge');
-                            if (badge) {
-                                badge.style.display = 'none';
-                                badge.textContent = '0';
-                            }
-                            
-                            // Remove bold styling from all notifications
-                            const notifications = document.querySelectorAll('.dropdown-item.fw-bold');
-                            notifications.forEach(item => {
-                                item.classList.remove('fw-bold');
-                            });
-                        }
-                    });
-                });
-            }
-        });
+        notificationSocket.onclose = function(e) {
+            console.error('Notification socket closed unexpectedly');
+        };
     </script>
 </body>
 </html> 
