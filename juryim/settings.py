@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "gambling",
     "tasks",
     "groups",
+    "user_notifications",
     # Add required third-party apps
     "rest_framework",
     "channels",
@@ -145,8 +146,11 @@ LOGOUT_REDIRECT_URL = 'users:login'
 # Add channel layers configuration
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer'
-    }
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
 }
 
 # Update ASGI application
