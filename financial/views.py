@@ -392,34 +392,48 @@ def deposit_request(request):
     if request.method == 'POST':
         form = DepositForm(request.POST)
         if form.is_valid():
-            amount = form.cleaned_data['amount']
-            
-            # Create or get user's financial account
-            account, created = FinancialAccount.objects.get_or_create(user=request.user)
-            
-            # Create deposit request
-            deposit = form.save(commit=False)
-            deposit.user = request.user
-            deposit.status = 'approved'  # For testing, auto-approve deposits
-            deposit.save()
-            
-            # Create transaction record
-            transaction = Transaction.objects.create(
-                account=account,
-                transaction_type='deposit',
-                amount=amount,
-                status='completed',
-                description=f'Deposit of {amount}',
-                completed_at=timezone.now()
-            )
-            
-            # Update account balance
-            account.balance += amount
-            account.total_deposited += amount
-            account.save()
-            
-            messages.success(request, f'Deposit of {amount} processed successfully')
-            return redirect('financial:account_overview')
+            try:
+                with transaction.atomic():
+                    amount = form.cleaned_data['amount']
+                    
+                    # Create or get user's financial account
+                    account, created = FinancialAccount.objects.get_or_create(user=request.user)
+                    
+                    # Create deposit request
+                    deposit = form.save(commit=False)
+                    deposit.user = request.user
+                    deposit.status = 'approved'  # For testing, auto-approve deposits
+                    deposit.save()
+                    
+                    # Create transaction record
+                    Transaction.objects.create(
+                        account=account,
+                        transaction_type='deposit',
+                        amount=amount,
+                        status='completed',
+                        description=f'Deposit of {amount}',
+                        completed_at=timezone.now()
+                    )
+                    
+                    # Update account balance
+                    account.balance += amount
+                    account.total_deposited += amount
+                    account.save()
+                    
+                    # Create notification
+                    create_financial_notification(
+                        user=request.user,
+                        title='Deposit Successful',
+                        message=f'Your deposit of {amount} has been processed successfully.',
+                        priority='medium',
+                        link=reverse('financial:account_overview')
+                    )
+                    
+                    messages.success(request, f'Deposit of {amount} processed successfully')
+                    return redirect('financial:account_overview')
+                    
+            except Exception as e:
+                messages.error(request, f'Error processing deposit: {str(e)}')
     else:
         form = DepositForm()
     
