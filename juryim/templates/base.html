@@ -110,6 +110,12 @@
                     {% endwith %}
                 </div>
             </div>
+            <div class="nav-item ms-3">
+                <a class="nav-link" href="{% url 'financial:account' %}">
+                    <i class="fas fa-wallet"></i>
+                    <span id="userBalance">{{ user.balance|default:"0.00" }}</span> BTC
+                </a>
+            </div>
             {% endif %}
         </div>
     </nav>
