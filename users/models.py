@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 import uuid
 from django.utils import timezone
+from decimal import Decimal
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -32,6 +33,28 @@ class User(AbstractUser):
     id_verified = models.BooleanField(default=False)
 
     email_verification_token = models.CharField(max_length=100, null=True, blank=True)
+
+    def get_total_balance(self):
+        from financial.models import Transaction
+        deposits = Transaction.objects.filter(
+            user=self, 
+            type='deposit', 
+            status='completed'
+        ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
+        
+        withdrawals = Transaction.objects.filter(
+            user=self, 
+            type='withdrawal', 
+            status='completed'
+        ).aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
+        
+        return deposits - withdrawals
+
+    def get_recent_transactions(self):
+        from financial.models import Transaction
+        return Transaction.objects.filter(
+            user=self
+        ).order_by('-created_at')[:10]
 
     class Meta:
         db_table = 'users'
