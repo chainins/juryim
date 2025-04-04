@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils import timezone
-from .models import GamblingGame, GamblingBet, GamblingTransaction
+from .models import GamblingGame, GamblingBet, GamblingTransaction, Game, Bet
 
 @admin.register(GamblingGame)
 class GamblingGameAdmin(admin.ModelAdmin):
@@ -69,4 +69,16 @@ class GamblingTransactionAdmin(admin.ModelAdmin):
     def bet_link(self, obj):
         url = reverse('admin:gambling_gamblingbet_change', args=[obj.bet.id])
         return format_html('<a href="{}">{}</a>', url, obj.bet.id)
-    bet_link.short_description = 'Bet' 
+    bet_link.short_description = 'Bet'
+
+@admin.register(Game)
+class GameAdmin(admin.ModelAdmin):
+    list_display = ('name', 'min_bet', 'max_bet', 'created_at')
+    search_fields = ('name',)
+    list_filter = ('created_at',)
+
+@admin.register(Bet)
+class BetAdmin(admin.ModelAdmin):
+    list_display = ('user', 'game', 'amount', 'outcome', 'created_at')
+    search_fields = ('user__username', 'game__name')
+    list_filter = ('created_at', 'outcome') 
