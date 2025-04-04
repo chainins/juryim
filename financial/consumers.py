@@ -143,4 +143,25 @@ class DepositConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'deposit_update',
             'data': event['data']
+        }))
+
+class BalanceConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.channel_layer.group_add(
+            f'user_balance_{self.scope["user"].id}',
+            self.channel_name
+        )
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            f'user_balance_{self.scope["user"].id}',
+            self.channel_name
+        )
+
+    async def balance_update(self, event):
+        # Send balance update to WebSocket
+        await self.send(text_data=json.dumps({
+            'type': 'balance_update',
+            'balance': event['balance']
         })) 
