@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Available Games</h2>
+    <div class="row">
+        {% for game in games %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ game.name }}</h5>
+                    <p class="card-text">{{ game.description }}</p>
+                    <p>Min bet: {{ game.min_bet }}</p>
+                    <p>Max bet: {{ game.max_bet }}</p>
+                    <a href="{% url 'gambling:place_bet' game.id %}" class="btn btn-primary">Place Bet</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Place Bet - {{ game.name }}</h2>
+    <div class="card">
+        <div class="card-body">
+            <h5>Game Details</h5>
+            <p>{{ game.description }}</p>
+            <p>Min bet: {{ game.min_bet }}</p>
+            <p>Max bet: {{ game.max_bet }}</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="amount">Bet Amount</label>
+                    <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Place Bet</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 
