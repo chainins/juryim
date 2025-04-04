@@ -6,7 +6,7 @@ from django.db.models import Sum, Q
 from django.db import transaction
 from django.http import JsonResponse
 from django.core.paginator import Paginator
-from .models import GamblingGame, GamblingBet, InvitedGambler
+from .models import GamblingGame, GamblingBet, InvitedGambler, Game, Bet
 from .forms import GamblingGameForm, PlaceBetForm, CreateGameForm
 from .services import GamblingService
 from .decorators import (
@@ -16,6 +16,8 @@ from .decorators import (
 )
 import json
 from decimal import Decimal
+from financial.models import Transaction
+from financial.utils import process_transaction
 
 class GamblingViews:
     @staticmethod
@@ -45,30 +47,13 @@ class GamblingViews:
     @login_required
     def game_list(request):
         """Display list of gambling games"""
-        status = request.GET.get('status', 'active')
-        
-        if status == 'active':
-            games = GamblingGame.objects.active()
-        elif status == 'completed':
-            games = GamblingGame.objects.completed()
-        else:
-            games = GamblingGame.objects.all()
-        
-        games = games.with_stats().order_by('-created_at')
-        
-        paginator = Paginator(games, 12)
-        page = request.GET.get('page')
-        games = paginator.get_page(page)
-        
-        return render(request, 'gambling/game_list.html', {
-            'games': games,
-            'status': status
-        })
+        games = Game.objects.all()
+        return render(request, 'gambling/game_list.html', {'games': games})
 
     @staticmethod
     @login_required
     def place_bet(request, game_id):
-        game = get_object_or_404(GamblingGame, id=game_id)
+        game = get_object_or_404(Game, id=game_id)
         
         if game.status != 'active':
             messages.error(request, 'This game is not accepting bets.')
@@ -81,29 +66,34 @@ class GamblingViews:
             return redirect('gambling:game_list')
             
         if request.method == 'POST':
-            form = PlaceBetForm(game, request.POST)
-            if form.is_valid():
-                amount = form.cleaned_data['amount']
-                
-                # Validate minimum bet
-                if amount < game.minimum_single_bet:
-                    messages.error(request, 'Bet amount is below minimum.')
+            amount = request.POST.get('amount')
+            try:
+                amount = float(amount)
+                if amount < game.min_bet or amount > game.max_bet:
+                    messages.error(request, f'Bet must be between {game.min_bet} and {game.max_bet}')
                     return redirect('gambling:game_detail', game_id=game.id)
                     
-                GamblingBet.objects.create(
-                    game=game,
+                # Use existing transaction processing
+                transaction = process_transaction(
                     user=request.user,
-                    bet_option=form.cleaned_data['bet_option'],
-                    amount=amount
+                    amount=-amount,  # Negative for bet placement
+                    transaction_type='BET',
+                    description=f'Bet placed on {game.name}'
                 )
                 
-                if game.is_specific_users:
-                    InvitedGambler.objects.filter(
-                        game=game, user=request.user
-                    ).update(has_participated=True)
-                
-                messages.success(request, 'Bet placed successfully!')
-                return redirect('gambling:game_detail', game_id=game.id)
+                if transaction:
+                    bet = Bet.objects.create(
+                        user=request.user,
+                        game=game,
+                        amount=amount
+                    )
+                    messages.success(request, 'Bet placed successfully')
+                    return redirect('gambling:game_list')
+                else:
+                    messages.error(request, 'Insufficient funds')
+                    
+            except ValueError:
+                messages.error(request, 'Invalid bet amount')
         else:
             form = PlaceBetForm(game)
             
