@@ -449,4 +449,16 @@ def transaction_history(request):
     transactions = Transaction.objects.filter(account=account).order_by('-created_at')
     return render(request, 'financial/transaction_history.html', {
         'transactions': transactions
-    }) 
+    })
+
+@login_required
+def test_balance_update(request):
+    # Simulate a transaction
+    user = request.user
+    Transaction.objects.create(
+        user=user,
+        type='deposit',
+        amount=Decimal('0.001'),
+        status='completed'
+    )
+    return JsonResponse({'success': True}) 
