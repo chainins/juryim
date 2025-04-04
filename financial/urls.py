@@ -10,6 +10,7 @@ urlpatterns = [
     path('deposit/', views.deposit_request, name='deposit_request'),
     path('withdraw/', views.withdrawal_request, name='withdrawal_request'),
     path('transactions/', views.transaction_history, name='transaction_history'),
+    path('test-balance-update/', views.test_balance_update, name='test_balance_update'),
     
     # Keep any existing URLs...
 ] 
