@@ -10,4 +10,5 @@ urlpatterns = [
     path('financial/', include('financial.urls', namespace='financial')),
     path('social-auth/', include('social_django.urls', namespace='social')),
     path('notifications/', include('user_notifications.urls', namespace='user_notifications')),
+    path('gambling/', include('gambling.urls')),
 ]
