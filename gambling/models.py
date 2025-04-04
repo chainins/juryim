@@ -143,4 +143,24 @@ class GamblingSetting(models.Model):
         return self.key
 
     class Meta:
-        ordering = ['key'] 
+        ordering = ['key']
+
+class Game(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    min_bet = models.DecimalField(max_digits=10, decimal_places=2)
+    max_bet = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.name
+
+class Bet(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    game = models.ForeignKey(Game, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    outcome = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.game.name} - {self.amount}" 
