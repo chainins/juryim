@@ -6,9 +6,9 @@ from django.contrib.auth.decorators import login_required
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', login_required(TemplateView.as_view(template_name='home.html')), name='home'),
-    path('users/', include('users.urls', namespace='users')),
-    path('financial/', include('financial.urls', namespace='financial')),
+    path('users/', include('users.urls')),
+    path('financial/', include('financial.urls')),
+    path('gambling/', include('gambling.urls')),
     path('social-auth/', include('social_django.urls', namespace='social')),
     path('notifications/', include('user_notifications.urls', namespace='user_notifications')),
-    path('gambling/', include('gambling.urls')),
 ]
