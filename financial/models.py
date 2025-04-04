@@ -2,6 +2,9 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+import json
 
 class FinancialAccount(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -47,6 +50,20 @@ class Transaction(models.Model):
 
     def __str__(self):
         return f"{self.account.user.username} - {self.transaction_type} - {self.amount}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        
+        # Send balance update through WebSocket if transaction is completed
+        if self.status == 'completed':
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'user_balance_{self.account.user.id}',
+                {
+                    'type': 'balance_update',
+                    'balance': str(self.account.user.balance)
+                }
+            )
 
 class WithdrawalRequest(models.Model):
     STATUS_CHOICES = (

@@ -132,7 +132,8 @@
             const markAllReadBtn = document.getElementById('markAllReadBtn');
             const notificationBadge = document.getElementById('notificationBadge');
             const dropdownMenu = document.querySelector('.dropdown-menu');
-
+            const balanceElement = document.getElementById('userBalance');
+            
             // Function to update all notification items and badge
             function updateAllNotifications() {
                 // Update badge immediately
@@ -230,6 +231,18 @@
                 }
                 return cookieValue;
             }
+
+            // WebSocket connection for balance updates
+            const balanceSocket = new WebSocket(
+                'ws://' + window.location.host + '/ws/balance/'
+            );
+
+            balanceSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                if (data.type === 'balance_update') {
+                    balanceElement.textContent = parseFloat(data.balance).toFixed(8);
+                }
+            };
         });
     </script>
 </body>
